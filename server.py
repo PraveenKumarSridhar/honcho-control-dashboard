@@ -322,6 +322,70 @@ def dashboard_snapshot(workspace: str | None = None) -> dict:
                      "upstream issue blocks conclusion extraction."),
         })
     out["diagnostics"] = {"advisors": advisors, "checked_at": time.time()}
+
+    # 10) graph — peers × sessions. Force layout in the front end.
+    nodes = []
+    for p in out["peers_base"]:
+        nodes.append({"id": p["id"], "kind": "peer"})
+    for s in sessions:
+        nodes.append({"id": s["id"], "kind": "session",
+                      "size": s.get("message_count", 0)})
+    edges = []
+    for s in sessions:
+        _, plist = h("GET", f"/v3/workspaces/{ws}/sessions/{s['id']}/peers")
+        items = []
+        if isinstance(plist, dict):
+            raw = plist.get("items")
+            if isinstance(raw, list):
+                items = raw
+            elif isinstance(plist.get("peers"), list):
+                items = plist["peers"]
+        for p in items:
+            pid = p.get("id") if isinstance(p, dict) else p
+            if isinstance(pid, str):
+                edges.append({"source": pid, "target": s["id"]})
+    out["graph"] = {"nodes": nodes, "edges": edges}
+
+    # 11) workspace descriptions — what is each workspace for?
+    workspace_meta = {
+        "pk-local":   "PK's sandbox workspace. Empty as of last check — used for ad-hoc testing.",
+        "hermes":     "The Hermes agent's production memory. Holds every conversation across agents.",
+    }
+    out["workspace_meta"] = {
+        w["id"]: workspace_meta.get(w["id"], "Honcho workspace.")
+        for w in out["workspaces"]
+    }
+
+    # 11b) deriver config — read straight from the running container so the
+    # user sees the actual model without having to grep their .env.
+    import subprocess as _sp
+    try:
+        env_out = _sp.run(
+            ["docker", "inspect", "honcho-deriver",
+             "--format", "{{range .Config.Env}}{{println .}}{{end}}"],
+            capture_output=True, text=True, timeout=4)
+        deriver_env = {}
+        for line in (env_out.stdout or "").splitlines():
+            if "DERIVER_MODEL" in line or "DIALECTIC_LEVELS__max" in line \
+               or "DREAM_MODEL" in line or "SUMMARY_MODEL" in line \
+               or "PEER_CARD_MODEL" in line or "LLM_BASE_URL=" in line \
+               or "DERIVER_ENABLED=" in line or "DERIVER__FLUSH_ENABLED=" in line:
+                k, _, v = line.partition("=")
+                deriver_env[k] = v
+    except Exception:
+        deriver_env = {}
+    out["deriver_config"] = deriver_env
+
+    # 12) system info — model, host, port.
+    # These come from env vars the proxy knows about; the user wants them visible
+    # without having to dig.
+    out["system"] = {
+        "proxy_host": "127.0.0.1:7777",
+        "honcho_host": HONCHO.replace("http://", "").replace("https://", ""),
+        "proxy_started_at": getattr(USAGE, "started_at", None),
+        "workspace_count": len(out["workspaces"]),
+        "honcho_version": "v3 REST API",
+    }
     return out
 
 

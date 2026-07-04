@@ -3,78 +3,67 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Honcho Control — Dashboard</title>
+<title>Honcho Control</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-  /* ----------------------------------------------------------
-     Tokens
-  ---------------------------------------------------------- */
   :root {
-    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
-                 "Inter", "Segoe UI", system-ui, sans-serif;
-    --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo,
-                 "Cascadia Code", Consolas, monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, "Cascadia Code", Consolas, monospace;
 
-    /* Surface — muted, not pure black. OLED users get true black bg. */
-    --bg:        #f7f8fa;
+    /* Lighter, brighter surface than the previous build. Was 0c0e12/141820 — now slightly less dark. */
+    --bg:        #f4f6fa;
     --bg-raised: #ffffff;
-    --bg-sunken: #eef0f4;
-    --line:      #e2e6ec;
-    --line-soft: #ecf0f4;
+    --bg-sunken: #eef1f6;
+    --line:      #dfe4ec;
+    --line-soft: #ebeef4;
 
-    /* Ink — high-contrast text, dim for de-emphasised */
-    --ink:       #1a2230;
-    --ink-2:     #4a5567;
-    --ink-3:     #7d8794;
-    --ink-4:     #aab3bf;
+    --ink:       #0f1622;
+    --ink-2:     #3d4757;
+    --ink-3:     #6a7585;
+    --ink-4:     #98a2b1;
 
-    /* One accent (teal). Single-coloured dashboards read cleaner. */
-    --accent:    #0d8a73;
-    --accent-2:  #0a6e5c;
-    --accent-bg: rgba(13,138,115,0.08);
+    --accent:    #14a085;
+    --accent-2:  #2c7ef8;
+    --accent-bg: rgba(20,160,133,0.10);
 
-    /* Semantic. Used sparingly — banners, freshness chips. */
-    --warn:      #b86b00;
-    --warn-bg:   #fff5e0;
+    --warn:      #b94e09;
+    --warn-bg:   #fff1de;
     --bad:       #b3261e;
     --bad-bg:    #fde8e6;
-    --ok:        #166534;
-    --ok-bg:     #e7f5ec;
+    --ok:        #146a3e;
+    --ok-bg:     #ddf3e4;
 
-    /* Geometry */
-    --r-sm: 4px;
-    --r:    8px;
-    --r-lg: 12px;
-    --shadow-sm: 0 1px 0 rgba(20,30,50,0.04);
-    --shadow:    0 1px 2px rgba(20,30,50,0.06), 0 0 0 1px var(--line);
-    --shadow-lg: 0 4px 16px rgba(20,30,50,0.08), 0 0 0 1px var(--line);
+    --peer:      #2c7ef8;
+    --peer-bg:   rgba(44,126,248,0.10);
+    --session:   #14a085;
+    --session-bg:rgba(20,160,133,0.10);
+
+    --r:    10px;
+    --r-sm: 6px;
+    --r-lg: 14px;
+    --shadow-sm: 0 1px 0 rgba(15,22,34,0.04);
+    --shadow:    0 1px 2px rgba(15,22,34,0.06), 0 0 0 1px var(--line);
+    --shadow-lg: 0 8px 24px rgba(15,22,34,0.10), 0 0 0 1px var(--line);
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg:        #0c0e12;
-      --bg-raised: #141820;
-      --bg-sunken: #08090d;
-      --line:      #1f2530;
-      --line-soft: #181d27;
-      --ink:       #e6eaf2;
-      --ink-2:     #aab3c1;
+      --bg:        #0d1119;
+      --bg-raised: #161c28;
+      --bg-sunken: #0a0e15;
+      --line:      #232a37;
+      --line-soft: #1c222d;
+      --ink:       #e8edf5;
+      --ink-2:     #aeb6c4;
       --ink-3:     #7d8794;
       --ink-4:     #4a5567;
       --accent:    #4ee0c1;
       --accent-2:  #6aa6ff;
-      --accent-bg: rgba(78,224,193,0.08);
-      --warn-bg:   rgba(184,107,0,0.15);
-      --bad-bg:    rgba(179,38,30,0.15);
-      --ok-bg:     rgba(22,101,52,0.18);
       --shadow:    0 1px 0 rgba(0,0,0,0.4), 0 0 0 1px var(--line);
-      --shadow-lg: 0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px var(--line);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px var(--line);
     }
   }
 
-  /* ----------------------------------------------------------
-     Reset / base
-  ---------------------------------------------------------- */
   *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; min-height: 100vh; }
   body {
@@ -82,420 +71,81 @@
     color: var(--ink);
     font-family: var(--font-sans);
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
   .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
   .mono { font-family: var(--font-mono); font-size: 0.92em; }
 
-  /* ----------------------------------------------------------
-     Layout
-  ---------------------------------------------------------- */
-  .page {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 24px 28px 80px;
-  }
+  /* Page */
+  .page { max-width: 1280px; margin: 0 auto; padding: 22px 28px 100px; }
 
+  /* Topbar */
   .topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--line);
-    margin-bottom: 24px;
-    gap: 16px;
-    flex-wrap: wrap;
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 18px; margin-bottom: 18px;
+    gap: 14px; flex-wrap: wrap;
   }
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 600;
-    font-size: 15px;
-    letter-spacing: -0.01em;
-  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; letter-spacing: -0.01em; }
   .brand-mark {
-    width: 22px; height: 22px;
-    border-radius: var(--r-sm);
+    width: 26px; height: 26px; border-radius: 7px;
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 700;
-    font-size: 11px;
-    font-family: var(--font-mono);
+    color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; font-family: var(--font-mono);
+    box-shadow: 0 2px 6px rgba(20,160,133,0.3);
   }
-  .topbar-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 12px;
-    color: var(--ink-3);
-  }
+  .topbar-right { display: flex; align-items: center; gap: 14px; font-size: 12.5px; color: var(--ink-3); }
+  .pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .pulse.live { animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
 
-  .toolbar {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-  }
+  /* Workspace pills + descriptions */
+  .ws-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
   .pill {
-    appearance: none;
-    border: 1px solid var(--line);
-    background: var(--bg-raised);
-    color: var(--ink-2);
-    font: inherit;
-    font-size: 13px;
-    padding: 6px 14px;
-    border-radius: 999px;
-    cursor: pointer;
-    transition: 0.15s;
+    appearance: none; border: 1px solid var(--line);
+    background: var(--bg-raised); color: var(--ink-2);
+    font: inherit; font-size: 13px; padding: 7px 14px;
+    border-radius: 999px; cursor: pointer; transition: 0.15s;
   }
   .pill:hover { color: var(--ink); border-color: var(--ink-4); }
-  .pill[aria-pressed="true"], .pill.is-active {
-    color: var(--accent-2);
-    border-color: var(--accent);
-    background: var(--accent-bg);
-    font-weight: 500;
+  .pill.is-active {
+    color: var(--accent-2); border-color: var(--accent-2);
+    background: rgba(44,126,248,0.08); font-weight: 500;
   }
-
-  /* ----------------------------------------------------------
-     Cards / panels
-  ---------------------------------------------------------- */
-  .panel {
+  .ws-desc {
+    color: var(--ink-3); font-size: 12.5px; line-height: 1.5;
+    padding: 10px 14px;
     background: var(--bg-raised);
     border: 1px solid var(--line);
     border-radius: var(--r);
-    box-shadow: var(--shadow-sm);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+    margin-bottom: 22px;
   }
-  .panel-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 18px;
-    border-bottom: 1px solid var(--line-soft);
-    gap: 10px;
-  }
-  .panel-title {
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--ink-2);
-    margin: 0;
-  }
-  .panel-body {
-    padding: 16px 18px;
-    flex: 1;
-  }
-  .panel-body.flush { padding: 0; }
+  .ws-desc strong { color: var(--ink-2); font-weight: 600; }
 
-  /* popover hint */
-  .hint {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 16px; height: 16px;
-    border-radius: 50%;
-    border: 1px solid var(--ink-4);
-    color: var(--ink-3);
-    font-size: 10px;
-    cursor: help;
-    position: relative;
-    margin-left: 4px;
-    user-select: none;
-  }
-  .hint:hover, .hint:focus { color: var(--accent-2); border-color: var(--accent); outline: none; }
-  .hint[data-tip]::after {
-    content: attr(data-tip);
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-    width: max-content;
-    max-width: 280px;
-    padding: 8px 12px;
-    background: var(--ink);
-    color: var(--bg);
-    font-size: 12px;
-    font-weight: 400;
-    line-height: 1.45;
-    border-radius: var(--r-sm);
-    box-shadow: var(--shadow-lg);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.15s;
-    z-index: 100;
-    text-align: left;
-    text-transform: none;
-    letter-spacing: 0;
-  }
-  .hint:hover::after, .hint:focus::after { opacity: 1; }
-
-  /* ----------------------------------------------------------
-     KPI strip
-  ---------------------------------------------------------- */
-  .kpis {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-  @media (max-width: 1100px) { .kpis { grid-template-columns: repeat(3, 1fr); } }
-  @media (max-width: 600px)  { .kpis { grid-template-columns: repeat(2, 1fr); } }
-  .kpi {
+  /* System strip */
+  .system {
+    display: flex; gap: 0;
+    border: 1px solid var(--line); border-radius: var(--r);
     background: var(--bg-raised);
-    border: 1px solid var(--line);
-    border-radius: var(--r);
-    padding: 14px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    position: relative;
-  }
-  .kpi-label {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--ink-3);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    display: flex;
-    align-items: center;
-  }
-  .kpi-value {
-    font-size: 26px;
-    font-weight: 600;
-    line-height: 1.1;
-    color: var(--ink);
-    letter-spacing: -0.02em;
-  }
-  .kpi-sub {
-    font-size: 12px;
-    color: var(--ink-3);
-  }
-  .kpi.accent .kpi-value { color: var(--accent-2); }
-  .kpi.warn   .kpi-value { color: var(--warn); }
-
-  /* ----------------------------------------------------------
-     Main grid
-  ---------------------------------------------------------- */
-  .grid-main {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-  .grid-mid, .grid-list {
-    display: grid;
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-  .grid-mid  { grid-template-columns: 1fr 1fr; }
-  .grid-list { grid-template-columns: 1fr 1fr; }
-  @media (max-width: 900px) {
-    .grid-main, .grid-mid, .grid-list { grid-template-columns: 1fr; }
-  }
-
-  /* ----------------------------------------------------------
-     Deriver card content
-  ---------------------------------------------------------- */
-  .deriver-row {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 8px 16px;
-    align-items: baseline;
-  }
-  .deriver-status-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    padding: 3px 10px;
-    border-radius: 999px;
-    background: var(--ink-4);
-    color: var(--bg-raised);
-  }
-  .deriver-status-pill.busy { background: var(--accent); }
-  .deriver-status-pill.idle { background: var(--ink-4); }
-  .progress {
-    height: 6px;
-    background: var(--bg-sunken);
-    border-radius: 999px;
-    overflow: hidden;
-    margin: 14px 0 12px;
-  }
-  .progress > span {
-    display: block;
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--accent-2));
-    border-radius: inherit;
-    transition: width 0.5s cubic-bezier(0.2, 0, 0.2, 1);
-  }
-  .progress-meta {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    color: var(--ink-3);
-  }
-  .actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 16px;
-    flex-wrap: wrap;
-  }
-  .btn {
-    appearance: none;
-    border: 1px solid var(--line);
-    background: var(--bg-raised);
-    color: var(--ink);
-    font: inherit;
-    font-size: 13px;
-    padding: 8px 14px;
-    border-radius: var(--r-sm);
-    cursor: pointer;
-    transition: 0.15s;
-  }
-  .btn:hover { border-color: var(--accent); color: var(--accent-2); }
-  .btn.primary {
-    background: var(--accent);
-    color: white;
-    border-color: var(--accent);
-  }
-  .btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  /* pulsing dot */
-  .pulse {
-    display: inline-block;
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-  .pulse.live { animation: pulse 1.4s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
-
-  /* event log */
-  .log {
-    margin-top: 16px;
-    background: var(--bg-sunken);
-    border-radius: var(--r-sm);
-    padding: 10px 12px;
-    font-family: var(--font-mono);
-    font-size: 11.5px;
-    max-height: 200px;
-    overflow-y: auto;
-  }
-  .log-row { color: var(--ink-2); padding: 2px 0; line-height: 1.4; }
-  .log-row .ts { color: var(--ink-4); margin-right: 8px; }
-  .log-row.ok  { color: var(--ok); }
-  .log-row.err { color: var(--bad); }
-  .log-row b { font-weight: 600; color: var(--accent-2); }
-
-  /* ----------------------------------------------------------
-     Chart card
-  ---------------------------------------------------------- */
-  .chart-wrap { position: relative; height: 220px; }
-  .chart-stats {
-    display: flex;
-    gap: 24px;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid var(--line-soft);
-    font-size: 12px;
-    color: var(--ink-3);
-  }
-  .chart-stats > div { display: flex; align-items: baseline; gap: 6px; }
-  .chart-stats .v { color: var(--ink); font-weight: 500; }
-  .chart-stats .v.accent { color: var(--accent-2); }
-
-  /* ----------------------------------------------------------
-     Lists — sessions, peers
-  ---------------------------------------------------------- */
-  .scroll {
-    overflow-y: auto;
-    max-height: 420px;
-    padding: 4px;
-  }
-  .row {
-    padding: 14px 18px;
-    border-bottom: 1px solid var(--line-soft);
-    transition: background 0.15s;
-  }
-  .row:last-child { border-bottom: none; }
-  .row:hover { background: var(--bg-sunken); }
-  .row-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-bottom: 6px;
-  }
-  .row-id {
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--ink);
-    font-family: var(--font-mono);
-    letter-spacing: -0.01em;
-  }
-  .row-id.muted { color: var(--ink-2); font-weight: 500; font-family: var(--font-sans); }
-  .row-meta {
-    display: flex;
-    gap: 16px;
-    font-size: 12px;
-    color: var(--ink-3);
-    margin: 6px 0 8px;
-    flex-wrap: wrap;
-  }
-  .row-meta span { display: inline-flex; align-items: center; gap: 4px; }
-  .row-meta .num { color: var(--ink-2); font-weight: 500; }
-  .row-body {
-    font-size: 13px;
-    color: var(--ink-2);
-    line-height: 1.5;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .row-body.empty {
-    color: var(--ink-4);
-    font-style: italic;
-  }
-
-  /* ----------------------------------------------------------
-     Freshness chips + status badges
-  ---------------------------------------------------------- */
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    font-weight: 500;
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: var(--bg-sunken);
-    color: var(--ink-2);
-  }
-  .badge.fresh { background: var(--ok-bg); color: var(--ok); }
-  .badge.stale { background: var(--warn-bg); color: var(--warn); }
-  .badge.cold  { background: var(--bg-sunken); color: var(--ink-3); }
-  .badge.has   { background: var(--accent-bg); color: var(--accent-2); }
-
-  /* ----------------------------------------------------------
-     Diagnostics banners
-  ---------------------------------------------------------- */
-  .advisors {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
     margin-bottom: 20px;
+    overflow: hidden;
   }
+  .system-cell {
+    flex: 1; padding: 12px 18px;
+    border-right: 1px solid var(--line-soft);
+    display: flex; flex-direction: column; gap: 4px;
+    min-width: 0;
+  }
+  .system-cell:last-child { border-right: none; }
+  .system-label { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  .system-value { font-size: 14px; color: var(--ink); font-family: var(--font-mono); word-break: break-all; }
+  .system-value .ok { color: var(--ok); }
+  .system-value .bad { color: var(--bad); }
+
+  /* Advisors */
+  .advisors { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
   .advisor {
     border: 1px solid var(--line);
     border-left-width: 3px;
@@ -504,103 +154,245 @@
     font-size: 13px;
     background: var(--bg-raised);
   }
-  .advisor.warn   { border-left-color: var(--warn); background: var(--warn-bg); color: var(--ink); }
-  .advisor.info   { border-left-color: var(--accent); }
+  .advisor.warn   { border-left-color: var(--warn); background: var(--warn-bg); }
   .advisor-title  { font-weight: 600; margin-bottom: 4px; }
   .advisor-body   { color: var(--ink-2); line-height: 1.5; }
 
-  /* ----------------------------------------------------------
-     Stat rows (memory state, usage)
-  ---------------------------------------------------------- */
-  .stat {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding: 9px 0;
+  /* Hero — graph card */
+  .hero {
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    background: var(--bg-raised);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .hero-head {
+    padding: 14px 20px; border-bottom: 1px solid var(--line-soft);
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+  }
+  .hero-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); }
+  .hero-sub   { margin: 4px 0 0; font-size: 12.5px; color: var(--ink-3); line-height: 1.45; }
+  .hero-body  { padding: 8px 0 0; }
+  #memory-graph { width: 100%; height: 360px; display: block; }
+  .graph-legend {
+    display: flex; gap: 16px;
+    padding: 10px 20px 14px;
+    font-size: 12px;
+    color: var(--ink-3);
+    border-top: 1px solid var(--line-soft);
+  }
+  .legend-dot {
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+    margin-right: 6px; vertical-align: middle;
+  }
+
+  /* Generic panel */
+  .panel {
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
     border-bottom: 1px solid var(--line-soft);
-    font-size: 13px;
+    gap: 10px;
+  }
+  .panel-title {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--ink-2); margin: 0;
+    display: flex; align-items: center;
+  }
+  .panel-body { padding: 14px 16px; flex: 1; }
+  .panel-body.flush { padding: 0; }
+
+  /* Hints */
+  .hint {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    border: 1px solid var(--ink-4);
+    color: var(--ink-3); font-size: 9.5px; font-weight: 700;
+    cursor: help; position: relative; user-select: none; margin-left: 5px;
+  }
+  .hint:hover, .hint:focus { color: var(--accent-2); border-color: var(--accent-2); outline: none; }
+  .hint[data-tip]::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    width: max-content; max-width: 280px;
+    padding: 8px 12px;
+    background: var(--ink); color: var(--bg);
+    font-size: 12px; font-weight: 400; line-height: 1.45;
+    border-radius: var(--r-sm); box-shadow: var(--shadow-lg);
+    opacity: 0; pointer-events: none; transition: opacity 0.15s;
+    z-index: 100; text-align: left;
+    text-transform: none; letter-spacing: 0;
+  }
+  .hint:hover::after, .hint:focus::after { opacity: 1; }
+
+  /* Grids */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* Deriver row */
+  .progress { height: 6px; background: var(--bg-sunken); border-radius: 999px; overflow: hidden; margin: 10px 0 8px; }
+  .progress > span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: inherit; transition: width 0.5s cubic-bezier(0.2,0,0.2,1); }
+  .progress-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); margin-bottom: 8px; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; padding: 3px 10px; border-radius: 999px;
+    background: var(--ink-4); color: var(--bg-raised); font-weight: 500;
+  }
+  .status-pill.busy { background: var(--accent); }
+  .status-pill.idle { background: var(--ink-4); }
+
+  .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .btn {
+    appearance: none; border: 1px solid var(--line); background: var(--bg-raised); color: var(--ink);
+    font: inherit; font-size: 13px; padding: 7px 14px; border-radius: var(--r-sm); cursor: pointer; transition: 0.15s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent-2); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Chart */
+  .chart-wrap { position: relative; height: 200px; }
+  .chart-stats {
+    display: flex; gap: 24px; margin-top: 10px;
+    padding-top: 10px; border-top: 1px solid var(--line-soft);
+    font-size: 12px; color: var(--ink-3);
+  }
+  .chart-stats > div { display: flex; align-items: baseline; gap: 6px; }
+  .chart-stats .v { color: var(--ink); font-weight: 500; }
+  .chart-stats .v.accent { color: var(--accent-2); }
+
+  /* Lists */
+  .scroll { overflow-y: auto; max-height: 380px; }
+  .row {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line-soft);
+    transition: background 0.15s;
+  }
+  .row:last-child { border-bottom: none; }
+  .row:hover { background: var(--bg-sunken); }
+  .row-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 5px;
+  }
+  .row-id { font-weight: 600; font-size: 13.5px; color: var(--ink); font-family: var(--font-mono); letter-spacing: -0.01em; }
+  .row-id.muted { color: var(--ink-2); font-weight: 500; font-family: var(--font-sans); }
+  .row-meta {
+    display: flex; gap: 12px; font-size: 12px; color: var(--ink-3);
+    margin: 5px 0 6px; flex-wrap: wrap;
+  }
+  .row-meta span { display: inline-flex; align-items: center; gap: 4px; }
+  .row-meta .num { color: var(--ink-2); font-weight: 500; }
+  .row-body {
+    font-size: 13px; color: var(--ink-2); line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .row-body.empty { color: var(--ink-4); font-style: italic; }
+
+  /* Badges */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 500; padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--bg-sunken); color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .badge.fresh { background: var(--ok-bg); color: var(--ok); }
+  .badge.stale { background: var(--warn-bg); color: var(--warn); }
+  .badge.cold  { background: var(--bg-sunken); color: var(--ink-3); }
+  .badge.has   { background: var(--accent-bg); color: var(--accent-2); }
+
+  /* Chips */
+  .chip {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    font-size: 11px; font-weight: 600; margin-right: 8px; flex-shrink: 0;
+    background: var(--peer-bg); color: var(--peer);
+  }
+  .chip.session { background: var(--session-bg); color: var(--session); }
+
+  /* Stats */
+  .stat {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 8px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px;
   }
   .stat:last-child { border-bottom: none; }
   .stat .k { color: var(--ink-3); }
   .stat .v { color: var(--ink); font-weight: 500; }
-  .stat.highlight { padding-top: 12px; margin-top: 4px; border-top: 1px solid var(--line); }
+  .stat.highlight {
+    padding-top: 10px; margin-top: 4px; border-top: 1px solid var(--line);
+  }
   .stat.highlight .k { color: var(--accent-2); font-weight: 500; }
-  .stat.highlight .v { color: var(--accent-2); font-size: 16px; }
-
+  .stat.highlight .v { color: var(--accent-2); font-size: 15px; }
   .footnote {
-    font-size: 11.5px;
-    color: var(--ink-3);
-    line-height: 1.5;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid var(--line-soft);
+    font-size: 11.5px; color: var(--ink-3); line-height: 1.5;
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-soft);
   }
   .footnote em { color: var(--ink-2); font-style: normal; font-weight: 500; }
 
   .ep-row {
-    display: grid;
-    grid-template-columns: 1fr auto auto auto;
-    gap: 12px;
-    align-items: baseline;
-    padding: 7px 0;
-    border-bottom: 1px solid var(--line-soft);
-    font-size: 12px;
+    display: grid; grid-template-columns: 1fr auto auto auto; gap: 12px;
+    align-items: baseline; padding: 6px 0;
+    border-bottom: 1px solid var(--line-soft); font-size: 12px;
   }
   .ep-row:last-child { border-bottom: none; }
-  .ep-row .ep-path { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); word-break: break-all; }
+  .ep-row .ep-path { font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); word-break: break-all; }
   .ep-row .v { font-variant-numeric: tabular-nums; color: var(--ink); }
   .ep-row .v.lat { color: var(--ink-3); }
   .ep-row .v.err { color: var(--bad); }
 
-  /* feed items (Recent Messages) */
-  .feed-empty {
-    padding: 40px 20px;
-    text-align: center;
-    color: var(--ink-4);
-    font-style: italic;
+  /* Memory anatomy */
+  .anatomy {
+    display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin: 8px 0 12px;
   }
+  @media (max-width: 900px) { .anatomy { grid-template-columns: 1fr 1fr; } }
+  .anatomy-card {
+    border: 1px solid var(--line); border-radius: var(--r-sm);
+    background: var(--bg-sunken);
+    padding: 10px 12px; text-align: center;
+  }
+  .anatomy-card .icon { font-size: 18px; margin-bottom: 4px; }
+  .anatomy-card .name { font-size: 11.5px; font-weight: 600; color: var(--ink-2); }
+  .anatomy-card .val  { font-size: 13px; color: var(--ink); margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+  /* Empty states */
   .empty-state {
-    padding: 40px 24px;
-    text-align: center;
-    color: var(--ink-3);
-    font-size: 13px;
-    line-height: 1.5;
+    padding: 32px 22px; text-align: center;
+    color: var(--ink-3); font-size: 13px; line-height: 1.5;
   }
+  .empty-state em { color: var(--ink-2); font-style: normal; font-weight: 500; }
 
-  /* tiny avatar chip for peers/feed */
-  .chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px; height: 22px;
-    border-radius: 50%;
-    background: var(--accent-bg);
-    color: var(--accent-2);
-    font-size: 11px;
-    font-weight: 600;
-    margin-right: 8px;
-    flex-shrink: 0;
+  /* Log */
+  .log {
+    margin-top: 12px; background: var(--bg-sunken);
+    border-radius: var(--r-sm); padding: 8px 10px;
+    font-family: var(--font-mono); font-size: 11.5px;
+    max-height: 160px; overflow-y: auto;
   }
-  .peer-card-head {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
+  .log-row { color: var(--ink-2); padding: 2px 0; line-height: 1.4; }
+  .log-row .ts { color: var(--ink-4); margin-right: 8px; }
+  .log-row.ok  { color: var(--ok); }
+  .log-row.err { color: var(--bad); }
+  .log-row b   { color: var(--accent-2); }
 
-  /* footer */
+  /* Footer */
   .foot {
-    margin-top: 32px;
-    padding-top: 20px;
+    margin-top: 28px; padding-top: 18px;
     border-top: 1px solid var(--line);
-    font-size: 12px;
-    color: var(--ink-3);
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
+    font-size: 12px; color: var(--ink-3);
+    display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
   }
   .foot code { font-family: var(--font-mono); background: var(--bg-sunken); padding: 2px 6px; border-radius: 3px; }
-
 </style>
 </head>
 <body>
@@ -612,40 +404,95 @@
       <span>Honcho Control</span>
     </div>
     <div class="topbar-right">
-      <span><span class="pulse live" style="color:var(--accent)"></span>
-        <span id="last-updated">connecting…</span>
-      </span>
+      <span><span class="pulse live"></span><span id="last-updated">connecting…</span></span>
     </div>
   </header>
 
-  <div class="toolbar" id="toolbar">
-    <button class="pill is-active" disabled>workspace…</button>
-  </div>
+  <div class="ws-bar" id="toolbar"></div>
+  <div class="ws-desc" id="ws-desc"></div>
 
   <div class="advisors" id="advisors"></div>
 
-  <div class="kpis" id="kpis"></div>
+  <div class="system" id="system">
+    <div class="system-cell">
+      <span class="system-label">Honcho host</span>
+      <span class="system-value mono" id="sys-honcho">—</span>
+    </div>
+    <div class="system-cell">
+      <span class="system-label">Deriver model</span>
+      <span class="system-value mono" id="sys-model">—</span>
+    </div>
+    <div class="system-cell">
+      <span class="system-label">Deriver queue</span>
+      <span class="system-value mono" id="sys-queue">—</span>
+    </div>
+    <div class="system-cell">
+      <span class="system-label">Proxy</span>
+      <span class="system-value mono" id="sys-proxy">—</span>
+    </div>
+  </div>
 
-  <div class="grid-main">
+  <section class="hero">
+    <div class="hero-head">
+      <div>
+        <h2 class="hero-title">Memory Graph
+          <span class="hint" tabindex="0"
+                data-tip="Each conversation is a session (green). Each person in a session is a peer (blue). Hover a node for details. This is the live shape of what Honcho knows about the workspace.">i</span>
+        </h2>
+        <p class="hero-sub">Sessions (green) connected to their participants (blue). Edge thickness scales with conversation length.</p>
+      </div>
+      <button class="btn" id="graph-reset" style="margin-top:6px">Re-layout</button>
+    </div>
+    <div class="hero-body">
+      <svg id="memory-graph"></svg>
+    </div>
+    <div class="graph-legend">
+      <span><span class="legend-dot" style="background:var(--peer)"></span>peer <em id="legend-peers"></em></span>
+      <span><span class="legend-dot" style="background:var(--session)"></span>session <em id="legend-sessions"></em></span>
+      <span><span class="legend-dot" style="background:var(--ink-4)"></span>edge = peer spoke in session</span>
+      <span id="legend-empty" style="display:none;color:var(--ink-4);font-style:italic">no graph data yet</span>
+    </div>
+  </section>
 
+  <!-- Memory anatomy strip -->
+  <section class="panel" style="margin-bottom:14px">
+    <div class="panel-head">
+      <h2 class="panel-title">Memory Anatomy
+        <span class="hint" tabindex="0"
+              data-tip="Four kinds of state Honcho keeps for you. The deriver runs in the background and grows these automatically.">i</span>
+      </h2>
+    </div>
+    <div class="panel-body">
+      <div class="anatomy" id="anatomy">
+        <div class="anatomy-card"><div class="icon">💬</div><div class="name">Messages</div><div class="val num" id="an-messages">—</div></div>
+        <div class="anatomy-card"><div class="icon">📝</div><div class="name">Summaries</div><div class="val num" id="an-summaries">—</div></div>
+        <div class="anatomy-card"><div class="icon">📇</div><div class="name">Peer cards</div><div class="val num" id="an-cards">—</div></div>
+        <div class="anatomy-card"><div class="icon">💡</div><div class="name">Conclusions</div><div class="val num" id="an-conclusions">—</div></div>
+      </div>
+      <div class="footnote" style="margin-top:0;padding-top:0;border:none">
+        What each is for:
+        <em>Messages</em> are the raw conversation Honcho stores.
+        <em>Summaries</em> are compressed version Honcho writes when sessions grow long.
+        <em>Peer cards</em> are a profile of who each peer is, written by the deriver.
+        <em>Conclusions</em> are atomic facts the deriver extracts (e.g. "PK prefers Python").
+      </div>
+    </div>
+  </section>
+
+  <div class="grid-2">
     <section class="panel">
       <div class="panel-head">
         <h2 class="panel-title">Deriver Queue
           <span class="hint" tabindex="0"
-                data-tip="Honcho's deriver is a background worker that extracts facts (conclusions) from your messages. The queue tracks pending, in-progress, and completed work units (WUs). Click 'Dream Now' to manually schedule a consolidation run across all messages.">i</span>
+                data-tip="Honcho's deriver is a background worker. The queue tracks pending, in-progress, and completed work units. 'Run dream now' schedules an `omni` consolidation across all messages.">i</span>
         </h2>
-        <div id="deriver-status-host"></div>
+        <span id="deriver-status-host"></span>
       </div>
       <div class="panel-body">
-        <div class="deriver-row">
-          <div>
-            <div id="deriver-progress-label" style="font-size:13px;color:var(--ink-2)">—</div>
-          </div>
-          <span id="deriver-summary-pill"></span>
-        </div>
+        <div id="deriver-progress-label" style="font-size:13px;color:var(--ink-2)">—</div>
         <div class="progress"><span id="deriver-bar" style="width:0%"></span></div>
         <div class="progress-meta">
-          <span id="deriver-pending">— pending</span>
+          <span id="deriver-pending">—</span>
           <span id="deriver-total">—</span>
         </div>
         <div class="actions">
@@ -658,106 +505,95 @@
 
     <section class="panel">
       <div class="panel-head">
-        <h2 class="panel-title">Message Activity · last 2 minutes
+        <h2 class="panel-title">Message Activity · last 2 min
           <span class="hint" tabindex="0"
-                data-tip="Total message count across all sessions. Rolling 2-minute view. 'Now' shows the current total; '1m delta' shows messages added in the last minute; 'total' is the lifetime sum.">i</span>
+                data-tip="Total message count across all sessions in this workspace. The dashed line is the per-tick delta.">i</span>
         </h2>
         <span class="badge" id="polling-badge">polling…</span>
       </div>
       <div class="panel-body">
         <div class="chart-wrap"><canvas id="msgChart"></canvas></div>
         <div class="chart-stats">
-          <div>now<span class="v num accent" id="msgs-now">0</span></div>
-          <div>1m Δ<span class="v num" id="msgs-delta">+0</span></div>
-          <div>total<span class="v num" id="msgs-total">0</span></div>
+          <div>now <span class="v num accent" id="msgs-now">0</span></div>
+          <div>1m Δ <span class="v num" id="msgs-delta">+0</span></div>
+          <div>total <span class="v num" id="msgs-total">0</span></div>
         </div>
       </div>
     </section>
-
   </div>
 
-  <div class="grid-mid">
+  <div class="grid-2">
     <section class="panel">
       <div class="panel-head">
         <h2 class="panel-title">Sessions
           <span class="hint" tabindex="0"
-                data-tip="A session is a conversation thread. Each user/agent pair gets its own session. The dashboard polls every session for new messages and shows the latest summary the deriver has produced.">i</span>
+                data-tip="A session is one conversation thread between two peers. Green chip = fresh (&lt;1h), amber = stale (&lt;3d), gray = older.">i</span>
         </h2>
         <span class="badge" id="sessions-count">0</span>
       </div>
-      <div class="panel-body flush">
-        <div class="scroll" id="sessions"></div>
-      </div>
+      <div class="panel-body flush"><div class="scroll" id="sessions"></div></div>
     </section>
 
     <section class="panel">
       <div class="panel-head">
         <h2 class="panel-title">Peers
           <span class="hint" tabindex="0"
-                data-tip="A peer is one participant in a conversation — you, the assistant, or an external user. Each peer accumulates its own card (a model of who they are) and its own extracted conclusions (facts learned). Click the username to filter by peer.">i</span>
+                data-tip="A peer is one participant — you, the assistant, or any external user. Each gets a card and accumulates conclusions.">i</span>
         </h2>
         <span class="badge" id="peers-count">0</span>
       </div>
-      <div class="panel-body flush">
-        <div class="scroll" id="peers"></div>
-      </div>
+      <div class="panel-body flush"><div class="scroll" id="peers"></div></div>
     </section>
   </div>
 
-  <div class="grid-list">
+  <div class="grid-2">
     <section class="panel">
       <div class="panel-head">
         <h2 class="panel-title">Recent Messages
           <span class="hint" tabindex="0"
-                data-tip="The latest message from each session. Fresh (<1h) entries show a green chip; older entries show their actual age so you can spot stale sessions quickly.">i</span>
+                data-tip="The most recent message from each session. Freshness chips show how recent that session is.">i</span>
         </h2>
       </div>
-      <div class="panel-body flush">
-        <div class="scroll" id="feed"></div>
-      </div>
+      <div class="panel-body flush"><div class="scroll" id="feed"></div></div>
     </section>
 
     <section class="panel">
       <div class="panel-head">
         <h2 class="panel-title">Memory State
           <span class="hint" tabindex="0"
-                data-tip="Honcho's REST API does not expose token counts. These character counts are a surrogate: divide by 4 for an approximate English token estimate. For real numbers, instrument your LLM provider or scrape deriver logs.">i</span>
+                data-tip="Honcho's API has no token field. We sum character counts from each memory type and divide by 4 — a rough English-text rule of thumb.">i</span>
         </h2>
-        <span class="badge" id="memory-total">~0 tokens</span>
+        <span class="badge" id="memory-total">~0</span>
       </div>
-      <div class="panel-body">
-        <div id="memory-state"></div>
-      </div>
+      <div class="panel-body"><div id="memory-state"></div></div>
     </section>
   </div>
 
-  <div class="grid-list">
+  <div class="grid-2">
     <section class="panel">
       <div class="panel-head">
         <h2 class="panel-title">Proxy Usage · last 60s
           <span class="hint" tabindex="0"
-                data-tip="Volume, latency, and error counts for the calls THIS dashboard makes to Honcho. This is the dashboard's overhead, not Honcho's internal LLM usage — Honcho does not surface that.">i</span>
+                data-tip="Volume and latency of calls this dashboard makes to Honcho. Not Honcho's internal LLM cost — that's not exposed.">i</span>
         </h2>
         <button class="btn" id="usage-reset" style="padding:4px 10px;font-size:12px">Reset</button>
       </div>
-      <div class="panel-body">
-        <div id="usage"></div>
-      </div>
+      <div class="panel-body"><div id="usage"></div></div>
     </section>
 
     <section class="panel">
       <div class="panel-head">
         <h2 class="panel-title">Workspace Totals</h2>
       </div>
-      <div class="panel-body">
-        <div id="totals"></div>
-      </div>
+      <div class="panel-body"><div id="totals"></div></div>
     </section>
   </div>
 
   <footer class="foot">
-    <div>Honcho Control · stdlib-only proxy · source on <code id="gh-link">github.com/PraveenKumarSridhar/honcho-control-dashboard</code></div>
-    <div>proxying <code id="honcho-host">127.0.0.1:8000</code> · serving on <code>127.0.0.1:7777</code></div>
+    <div>Honcho Control · stdlib-only proxy · source on
+      <a href="https://github.com/PraveenKumarSridhar/honcho-control-dashboard" target="_blank" rel="noreferrer">github.com/PraveenKumarSridhar/honcho-control-dashboard</a>
+    </div>
+    <div><code id="sys-pin">http://127.0.0.1:7777</code></div>
   </footer>
 
 </div>
@@ -765,27 +601,20 @@
 <script>
 // ---------------------------------------------------------------------------
 const POLL_MS = 2500;
-const HISTORY_POINTS = 48;     // 48 ticks × 2.5s = 120s rolling window
+const HISTORY_POINTS = 48;
 
-const state = {
-  ws: null,
-  prevTotals: null,
-  peers: [],
-  ws_id: null,
-};
+const state = { ws: null, prevTotals: null, peers: [] };
 
-// ---------- helpers --------------------------------------------------------
+// ---------- helpers ---------------------------------------------------------
 const $ = (id) => document.getElementById(id);
 
 function escapeHtml(s) {
-  return (s ?? '').toString()
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 function initials(s) {
   if (!s) return '?';
-  const parts = s.replace(/^user-default-/, '').split(/[-_]/);
-  return (parts[0]?.[0] || '?').toUpperCase() + (parts[1]?.[0] || '').toUpperCase();
+  const p = s.replace(/^user-default-/, '').split(/[-_]/);
+  return ((p[0]?.[0]) || '?').toUpperCase() + (p[1]?.[0] || '').toUpperCase();
 }
 function formatNum(n) {
   if (n === null || n === undefined) return '—';
@@ -794,27 +623,17 @@ function formatNum(n) {
 function relativeTime(ts) {
   if (!ts) return '—';
   let d;
-  if (ts.length > 20 && ts.includes('-')) {
-    d = new Date(ts).getTime();
-  } else {
-    // ULID: extract timestamp portion (first 10 base32 chars = first 48 bits)
-    // Best-effort: try to derive a unix-ms from ULID.
+  if (ts.length > 20 && ts.includes('-')) d = new Date(ts).getTime();
+  else {
     try {
       const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
       let ms = 0;
-      for (let i = 0; i < 10; i++) {
-        const c = ts[i];
-        const v = CROCKFORD.indexOf(c);
-        if (v < 0) { d = null; break; }
-        ms = ms * 32 + v;
-      }
+      for (let i = 0; i < 10; i++) { const v = CROCKFORD.indexOf(ts[i]); if (v<0) break; ms = ms*32 + v; }
       d = ms || null;
-    } catch (_) { d = null; }
+    } catch(_) { d = null; }
   }
   if (!d || isNaN(d)) return ts.slice(0, 8) + '…';
-  const diff = Date.now() - d;
-  const abs = Math.abs(diff);
-  const future = diff < 0;
+  const diff = Date.now() - d, abs = Math.abs(diff), future = diff < 0;
   if (abs < 60_000) return future ? 'in moments' : 'just now';
   const m = Math.round(abs / 60_000);
   if (m < 60) return future ? `in ${m}m` : `${m}m ago`;
@@ -828,10 +647,8 @@ function freshness(ts) {
   if (!ts) return 'cold';
   let d;
   if (ts.length > 20 && ts.includes('-')) d = new Date(ts).getTime();
-  else { try { /* same ULID math */ d = null; } catch (_) { d = null; } }
-  if (!d || isNaN(d)) return 'cold';
-  const ageMs = Date.now() - d;
-  const hours = ageMs / 3_600_000;
+  else return 'cold';
+  const hours = (Date.now() - d) / 3_600_000;
   if (hours < 1) return 'fresh';
   if (hours < 24 * 3) return 'stale';
   return 'cold';
@@ -842,14 +659,13 @@ function log(msg, level = '') {
   const box = $('log');
   const row = document.createElement('div');
   row.className = 'log-row ' + level;
-  const ts = new Date().toLocaleTimeString();
-  row.innerHTML = `<span class="ts">${ts}</span>${msg}`;
+  row.innerHTML = `<span class="ts">${new Date().toLocaleTimeString()}</span>${msg}`;
   box.prepend(row);
   while (box.children.length > 80) box.removeChild(box.lastChild);
 }
 
-// ---------- workspaces ------------------------------------------------------
-function renderToolbar(workspaces, active) {
+// ---------- workspace pills + description -----------------------------------
+function renderToolbar(workspaces, active, meta) {
   const tb = $('toolbar');
   tb.innerHTML = '';
   workspaces.forEach(w => {
@@ -860,9 +676,31 @@ function renderToolbar(workspaces, active) {
     b.onclick = () => { state.ws = w.id; fetchSnapshot(); };
     tb.appendChild(b);
   });
+  const desc = meta && meta[active];
+  $('ws-desc').innerHTML = desc
+    ? `Active workspace: <strong>${escapeHtml(active)}</strong> — ${escapeHtml(desc)}`
+    : '';
 }
 
-// ---------- advisors (banners) ----------------------------------------------
+// ---------- system strip ----------------------------------------------------
+function renderSystem(sys, dconfig, queue) {
+  $('sys-honcho').textContent = (sys && sys.honcho_host) || '—';
+  const m = (dconfig && dconfig.DERIVER_MODEL_CONFIG__MODEL) || 'unknown';
+  const t = (dconfig && dconfig.DERIVER_MODEL_CONFIG__TRANSPORT) || 'openai';
+  const base = (dconfig && dconfig.LLM_BASE_URL) || '';
+  const en = (dconfig && dconfig.DERIVER_ENABLED) || '';
+  $('sys-model').innerHTML = `<span style="color:var(--accent-2)">${escapeHtml(m)}</span> <span style="color:var(--ink-3)">via ${escapeHtml(t)}</span>`;
+  if (base) $('sys-model').title = `base url: ${base}\nenabled: ${en}`;
+  const done = queue && queue.completed_work_units || 0;
+  const total = queue && queue.total_work_units || 0;
+  const busy = queue && ((queue.pending_work_units||0) + (queue.in_progress_work_units||0)) > 0;
+  $('sys-queue').innerHTML = `<span class="${busy?'ok':''}">${done} / ${total}</span> · ${queue?.in_progress_work_units||0} active`;
+  const proxyPort = (sys && sys.proxy_host) || '127.0.0.1:7777';
+  $('sys-proxy').textContent = proxyPort;
+  $('sys-pin').textContent = `http://${proxyPort}`;
+}
+
+// ---------- advisors --------------------------------------------------------
 function renderAdvisors(advisors) {
   const host = $('advisors');
   if (!advisors || !advisors.length) { host.innerHTML = ''; return; }
@@ -870,89 +708,59 @@ function renderAdvisors(advisors) {
     <div class="advisor ${a.level}">
       <div class="advisor-title">${escapeHtml(a.title)}</div>
       <div class="advisor-body">${escapeHtml(a.body)}</div>
-    </div>
-  `).join('');
-}
-
-// ---------- KPIs ------------------------------------------------------------
-function renderKpis(t) {
-  const items = [
-    ['Sessions',   t.sessions,         'conversations',           null],
-    ['Peers',      t.peers,            'participants',            null],
-    ['Messages',   t.messages,         'across sessions',         null],
-    ['Conclusions', t.conclusions_total, 'extracted facts',
-                              t.conclusions_total > 0 ? 'accent' : null],
-    ['Dream work units', `${t.wu_done}/${t.wu_total}`, t.wu_pending ? `${t.wu_pending} pending` : 'all done',
-                              t.wu_total > 0 ? 'accent' : null],
-    ['Deriver in progress', t.wu_progress, t.wu_progress ? 'deriver active' : 'idle',
-                              t.wu_progress > 0 ? 'warn' : null],
-  ];
-  $('kpis').innerHTML = items.map(([l, v, sub, cls]) => `
-    <div class="kpi ${cls || ''}">
-      <div class="kpi-label">${escapeHtml(l)}
-        <span class="hint" tabindex="0"
-              data-tip="${escapeHtml(KPI_HINTS[l] || '')}">i</span>
-      </div>
-      <div class="kpi-value num">${v}</div>
-      <div class="kpi-sub">${escapeHtml(sub || '')}</div>
     </div>`).join('');
 }
 
-const KPI_HINTS = {
-  'Sessions': 'A session is a single conversation thread between two peers. Each user/agent pair gets its own session automatically.',
-  'Peers': 'A peer is one participant in any conversation — you, the assistant, or an external user.',
-  'Messages': 'Total messages stored across all sessions in this workspace.',
-  'Conclusions': 'Atomic facts the deriver has extracted (e.g. "user prefers Python"). These are the units of memory Honcho retrieves later.',
-  'Dream work units': 'Background tasks the deriver has scheduled and finished. Each work unit represents one batch of analysis or consolidation.',
-  'Deriver in progress': 'Work units currently being processed by the deriver worker. A nonzero number means the worker is actively thinking.'
-};
-
-// ---------- deriver panel ---------------------------------------------------
+// ---------- deriver --------------------------------------------------------
 function renderDeriver(q) {
   const total = q.total_work_units || 0;
   const done = q.completed_work_units || 0;
   const pending = q.pending_work_units || 0;
   const inprog = q.in_progress_work_units || 0;
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-
+  const pct = total > 0 ? Math.round(done / total * 100) : 0;
   $('deriver-bar').style.width = pct + '%';
   $('deriver-progress-label').textContent =
     total === 0 ? 'No work scheduled yet — trigger one to start.'
                 : `${done} of ${total} work units completed · ${pct}%`;
   $('deriver-pending').textContent = `${pending} pending · ${inprog} in progress`;
   $('deriver-total').textContent = total > 0 ? `${total} total` : 'awaiting input';
-
-  const pill = $('deriver-summary-pill');
   const busy = pending > 0 || inprog > 0;
-  pill.innerHTML = `<span class="deriver-status-pill ${busy ? 'busy' : 'idle'}">
-                      <span class="pulse ${busy ? 'live' : ''}"></span>
-                      ${busy ? 'processing' : (total > 0 ? 'complete' : 'idle')}
-                    </span>`;
+  $('deriver-status-host').innerHTML =
+    `<span class="status-pill ${busy?'busy':'idle'}">
+       <span class="pulse ${busy?'live':''}"></span>${busy ? 'processing' : (total > 0 ? 'complete' : 'idle')}
+     </span>`;
 }
 
-// ---------- sessions --------------------------------------------------------
-function renderSessions(sessions, advisors) {
+// ---------- anatomy --------------------------------------------------------
+function renderAnatomy(data) {
+  const sess = data.sessions || [];
+  const msgs = data.totals?.messages || 0;
+  const sumChars = sess.reduce((a, s) => a + (s.short_summary_chars||0) + (s.long_summary_chars||0), 0);
+  const cardChars = (data.peers || []).reduce((a, p) => a + (p.card_size||0), 0);
+  const concl = data.totals?.conclusions_total || 0;
+  $('an-messages').textContent  = formatNum(msgs);
+  $('an-summaries').textContent = sumChars > 0 ? formatNum(sumChars) + ' chars' : 'none';
+  $('an-cards').textContent     = cardChars > 0 ? formatNum(cardChars) + ' chars' : 'none';
+  $('an-conclusions').textContent = formatNum(concl);
+}
+
+// ---------- sessions, peers, feed -----------------------------------------
+function renderSessions(sessions) {
   const host = $('sessions');
   $('sessions-count').textContent = sessions.length;
-
   if (!sessions.length) {
-    host.innerHTML = '<div class="empty-state">No sessions yet. Start a conversation with the agent to create one.</div>';
+    host.innerHTML = '<div class="empty-state">No sessions yet.<br><em>Start a conversation with the agent to create one.</em></div>';
     return;
   }
-
-  // Aggregate empty-state hint at top when none of the sessions have summaries yet
-  const noSummaries = sessions.every(s => !s.short_summary && !s.long_summary);
-
   host.innerHTML = sessions.map(s => {
     const f = freshness(s.last_ts);
-    const badgeClass = `badge ${f}`;
     const summary = s.short_summary
       ? `<div class="row-body">${escapeHtml(s.short_summary)}</div>`
       : `<div class="row-body empty">No summary yet — the deriver needs more messages, or it's blocked upstream (see banner).</div>`;
     return `<div class="row">
       <div class="row-head">
         <div class="row-id">${escapeHtml(s.id)}</div>
-        <span class="${badgeClass}">${relativeTime(s.last_ts)}</span>
+        <span class="badge ${f}">${relativeTime(s.last_ts)}</span>
       </div>
       <div class="row-meta">
         <span><span class="num">${formatNum(s.message_count)}</span> msgs</span>
@@ -964,11 +772,9 @@ function renderSessions(sessions, advisors) {
   }).join('');
 }
 
-// ---------- peers -----------------------------------------------------------
 function renderPeers(peers) {
   const host = $('peers');
   $('peers-count').textContent = peers.length;
-
   if (!peers.length) {
     host.innerHTML = '<div class="empty-state">No peers yet.</div>';
     return;
@@ -976,193 +782,249 @@ function renderPeers(peers) {
   host.innerHTML = peers.map(p => `
     <div class="row">
       <div class="row-head">
-        <div class="peer-card-head">
-          <span class="chip">${initials(p.id)}</span>
-          <span class="row-id muted">${escapeHtml(p.id)}</span>
-        </div>
-        <span class="badge ${p.has_card ? 'has' : 'cold'}">
-          ${p.has_card ? `${formatNum(p.card_size)} chars` : 'no card'}
-        </span>
+        <div style="display:flex;align-items:center"><span class="chip">${initials(p.id)}</span><span class="row-id muted">${escapeHtml(p.id)}</span></div>
+        <span class="badge ${p.has_card ? 'has' : 'cold'}">${p.has_card ? formatNum(p.card_size) + ' chars' : 'no card'}</span>
       </div>
-      <div class="row-meta">
-        <span><span class="num">${formatNum(p.conclusions)}</span> conclusions</span>
-      </div>
+      <div class="row-meta"><span><span class="num">${formatNum(p.conclusions)}</span> conclusions</span></div>
       ${p.has_card
-        ? `<div class="row-body">Peer card exists. ${formatNum(p.card_size)} chars of distilled context are attached to this peer.</div>`
-        : `<div class="row-body empty">No peer card yet — will appear after the deriver writes one.</div>`}
+        ? `<div class="row-body">Peer card: ${formatNum(p.card_size)} chars of distilled context.</div>`
+        : `<div class="row-body empty">No peer card yet — appears after the deriver writes one.</div>`}
     </div>
   `).join('');
 }
 
-// ---------- recent messages (feed) ------------------------------------------
 function renderFeed(feed) {
   const host = $('feed');
   if (!feed.length) {
     host.innerHTML = '<div class="empty-state">No messages yet.</div>';
     return;
   }
-  host.innerHTML = feed.map(f => {
-    const fClass = freshness(f.ts);
-    return `<div class="row">
+  host.innerHTML = feed.map(f => `
+    <div class="row">
       <div class="row-head">
-        <div class="peer-card-head">
+        <div style="display:flex;align-items:center">
           <span class="chip">${initials(f.peer)}</span>
           <span class="row-id muted">${escapeHtml(f.peer || '?')}</span>
           <span style="color:var(--ink-4);font-size:12px">in</span>
           <span class="mono" style="font-size:12px;color:var(--ink-2)">${escapeHtml(f.session)}</span>
         </div>
-        <span class="badge ${fClass}">${relativeTime(f.ts)}</span>
+        <span class="badge ${freshness(f.ts)}">${relativeTime(f.ts)}</span>
       </div>
       <div class="row-body">${escapeHtml(f.preview)}</div>
-    </div>`;
-  }).join('');
+    </div>`).join('');
 }
 
-// ---------- memory state ----------------------------------------------------
+// ---------- memory state ---------------------------------------------------
 function renderMemoryState(ms) {
   const host = $('memory-state');
   if (!ms) { host.innerHTML = '<div class="empty-state">No data</div>'; return; }
-
-  // If everything is zero, show a meaningful empty state
-  const allZero = !ms.message_chars && !ms.short_summary_chars &&
-                  !ms.long_summary_chars && !ms.peer_card_chars && !ms.conclusion_chars;
+  const allZero = !ms.message_chars && !ms.short_summary_chars && !ms.long_summary_chars && !ms.peer_card_chars && !ms.conclusion_chars;
   if (allZero) {
-    host.innerHTML = `<div class="empty-state">
-        The memory state is empty.<br>
-        <em>This workspace has no message, summary, card, or conclusion content yet.</em>
-      </div>`;
-    $('memory-total').textContent = '~0 tokens';
+    host.innerHTML = '<div class="empty-state">Memory state is empty.<br><em>This workspace has no message, summary, card, or conclusion content yet.</em></div>';
+    $('memory-total').textContent = '~0';
     return;
   }
-
   const rows = [
-    ['Messages (raw)',         ms.message_chars],
-    ['Short summaries',        ms.short_summary_chars],
-    ['Long summaries',         ms.long_summary_chars],
-    ['Peer cards',             ms.peer_card_chars],
-    ['Conclusions',            ms.conclusion_chars],
+    ['Messages (raw)',  ms.message_chars],
+    ['Short summaries', ms.short_summary_chars],
+    ['Long summaries',  ms.long_summary_chars],
+    ['Peer cards',      ms.peer_card_chars],
+    ['Conclusions',     ms.conclusion_chars],
   ].filter(([_, v]) => v > 0);
-
   host.innerHTML = `
-    ${rows.map(([k, v]) => `<div class="stat">
-        <span class="k">${k}</span>
-        <span class="v num">${formatNum(v)} chars</span></div>`).join('')}
+    ${rows.map(([k,v]) => `<div class="stat"><span class="k">${k}</span><span class="v num">${formatNum(v)} chars</span></div>`).join('')}
     <div class="stat highlight">
       <span class="k">Approximate total</span>
       <span class="v num">~${formatNum(ms.approx_tokens_surrogate)} tokens</span>
     </div>
-    <div class="footnote">
-      <em>Surrogate, not exact.</em> Honcho's API has no token field;
-      this is character count ÷ 4, a rough English-text rule of thumb.
-      For real numbers, instrument your LLM provider or scrape the deriver container logs.
-    </div>
-  `;
-  $('memory-total').textContent = `~${formatNum(ms.approx_tokens_surrogate)} tokens`;
+    <div class="footnote"><em>Surrogate, not exact.</em> chars ÷ 4 is a rough English rule of thumb. For real tokens, instrument your LLM provider.</div>`;
+  $('memory-total').textContent = `~${formatNum(ms.approx_tokens_surrogate)}`;
 }
 
-// ---------- proxy usage -----------------------------------------------------
+// ---------- proxy usage ----------------------------------------------------
 function renderUsage(u) {
   const host = $('usage');
-  if (!u) { host.innerHTML = '<div class="empty-state">No data yet — refresh once more.</div>'; return; }
-
+  if (!u) { host.innerHTML = '<div class="empty-state">No data yet.</div>'; return; }
   const baseRows = [
     [`Calls in last ${u.window_seconds}s`, formatNum(u.calls_in_window)],
     ['Calls/sec (rolling avg)', u.calls_per_sec_avg.toFixed(3)],
-    ['Total recorded',          formatNum(u.total_calls_recorded)],
-    ['Dashboard polls served',  formatNum(u.snapshots)],
+    ['Total recorded', formatNum(u.total_calls_recorded)],
+    ['Dashboard polls served', formatNum(u.snapshots)],
   ];
   const top = (u.endpoints || []).slice(0, 6);
-  const epRows = top.map(e => `
+  const ep = top.map(e => `
     <div class="ep-row">
       <span class="ep-path">${escapeHtml(e.endpoint)}</span>
       <span class="v num">${e.calls}×</span>
       <span class="v lat num">${e.avg_lat_ms}ms</span>
       <span class="v err num">${e.errors}✗</span>
     </div>`).join('');
-
   host.innerHTML = `
-    ${baseRows.map(([k, v]) => `<div class="stat">
-        <span class="k">${k}</span>
-        <span class="v num">${v}</span></div>`).join('')}
-    ${epRows ? `<div style="margin:14px 0 6px;font-size:11px;text-transform:uppercase;
-                  letter-spacing:0.05em;color:var(--ink-3);font-weight:600">Top endpoints</div>
-               ${epRows}` : ''}
-    <div class="footnote">
-      <em>Why 0 tokens?</em> Honcho does not expose its own LLM call volume.
-      These counts measure the dashboard's outbound API traffic to Honcho,
-      which is a proxy for polling cost — useful for spotting regressions,
-      not a measure of deriver work.
-    </div>`;
+    ${baseRows.map(([k,v]) => `<div class="stat"><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('')}
+    ${ep ? `<div style="margin:12px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-3);font-weight:600">Top endpoints</div>${ep}` : ''}
+    <div class="footnote"><em>Why 0 tokens?</em> Honcho doesn't surface its own LLM call volume. These are your dashboard's outbound calls.</div>`;
 }
 
-// ---------- workspace totals -------------------------------------------------
-function renderTotals(totals, queue) {
+// ---------- workspace totals -----------------------------------------------
+function renderTotals(t, q) {
   const rows = [
-    ['Work units (done / total)', `${totals.wu_done} / ${totals.wu_total}`],
-    ['Work units (in progress)',   totals.wu_progress],
-    ['Work units (pending)',       totals.wu_pending],
-    ['Sessions',                   totals.sessions],
-    ['Peers',                      totals.peers],
-    ['Messages',                   totals.messages],
-    ['Conclusions',                totals.conclusions_total],
+    ['Work units (done / total)', `${t.wu_done} / ${t.wu_total}`],
+    ['Work units (in progress)',   t.wu_progress],
+    ['Work units (pending)',       t.wu_pending],
+    ['Sessions',                   t.sessions],
+    ['Peers',                      t.peers],
+    ['Messages',                   t.messages],
+    ['Conclusions',                t.conclusions_total],
   ];
-  $('totals').innerHTML = rows.map(([k, v]) => `
-    <div class="stat"><span class="k">${k}</span><span class="v num">${v}</span></div>
-  `).join('');
+  $('totals').innerHTML = rows.map(([k,v]) =>
+    `<div class="stat"><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('');
 }
 
-// ---------- chart -----------------------------------------------------------
+// ---------- memory graph (SVG force-directed) ------------------------------
+let graphLayout = null;
+function renderGraph(graph) {
+  const svg = $('memory-graph');
+  const W = svg.clientWidth || 720;
+  const H = 360;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = '';
+
+  const nodes = graph.nodes || [];
+  const edges = graph.edges || [];
+  $('legend-peers').textContent = `(${nodes.filter(n => n.kind === 'peer').length})`;
+  $('legend-sessions').textContent = `(${nodes.filter(n => n.kind === 'session').length})`;
+  $('legend-empty').style.display = nodes.length ? 'none' : 'inline';
+
+  if (!nodes.length) {
+    svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="var(--ink-4)" font-size="13" font-family="var(--font-sans)">No data to render yet.</text>`;
+    return;
+  }
+
+  // deterministic seeded layout: place sessions in a horizontal band,
+  // peers in a vertical band, with mild jitter so refreshes are stable.
+  const sess = nodes.filter(n => n.kind === 'session');
+  const peers = nodes.filter(n => n.kind === 'peer');
+  const positions = new Map();
+
+  const peerX = W * 0.18;
+  const sessX = W * 0.78;
+  const peerSpacing = H / (peers.length + 1);
+  const sessSpacing = H / (sess.length + 1);
+  peers.forEach((n, i) => {
+    positions.set(n.id, {
+      x: peerX + (hash(n.id) % 60 - 30),
+      y: peerSpacing * (i + 1) + (hash(n.id + 'y') % 40 - 20),
+      kind: 'peer',
+      label: n.id,
+    });
+  });
+  sess.forEach((n, i) => {
+    positions.set(n.id, {
+      x: sessX + (hash(n.id) % 60 - 30),
+      y: sessSpacing * (i + 1) + (hash(n.id + 'y') % 40 - 20),
+      kind: 'session',
+      label: n.id,
+      size: n.size || 0,
+    });
+  });
+
+  // Edges: count how many messages between source/target → thickness
+  const edgeWeight = new Map();
+  for (const e of edges) {
+    const k = `${e.source}|${e.target}`;
+    edgeWeight.set(k, (edgeWeight.get(k) || 0) + 1);
+  }
+
+  // Render edges first
+  const ns = 'http://www.w3.org/2000/svg';
+  const gEdges = document.createElementNS(ns, 'g');
+  for (const e of edges) {
+    const a = positions.get(e.source); const b = positions.get(e.target);
+    if (!a || !b) continue;
+    const w = edgeWeight.get(`${e.source}|${e.target}`) || 1;
+    const line = document.createElementNS(ns, 'line');
+    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
+    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
+    line.setAttribute('stroke', 'var(--ink-4)');
+    line.setAttribute('stroke-width', Math.min(4, 0.8 + w * 0.6));
+    line.setAttribute('stroke-opacity', '0.5');
+    gEdges.appendChild(line);
+  }
+  svg.appendChild(gEdges);
+
+  // Render nodes
+  const gNodes = document.createElementNS(ns, 'g');
+  for (const n of nodes) {
+    const p = positions.get(n.id);
+    if (!p) continue;
+    const r = p.kind === 'session'
+      ? 14 + Math.min(14, Math.sqrt(Math.max(1, p.size || 0)) * 1.2)
+      : 11;
+    const fill = p.kind === 'session' ? 'var(--session)' : 'var(--peer)';
+    const c = document.createElementNS(ns, 'circle');
+    c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', r);
+    c.setAttribute('fill', fill); c.setAttribute('fill-opacity', '0.85');
+    c.setAttribute('stroke', 'var(--bg-raised)'); c.setAttribute('stroke-width', '3');
+    const t = document.createElementNS(ns, 'title');
+    t.textContent = `${p.kind === 'session' ? 'Session' : 'Peer'}: ${p.label}${p.size?`  ·  ${p.size} messages`:''}`;
+    c.appendChild(t);
+    gNodes.appendChild(c);
+
+    // Label
+    const lbl = document.createElementNS(ns, 'text');
+    lbl.setAttribute('x', p.x); lbl.setAttribute('y', p.kind === 'session' ? p.y - r - 6 : p.y + r + 14);
+    lbl.setAttribute('text-anchor', 'middle');
+    lbl.setAttribute('fill', 'var(--ink-2)');
+    lbl.setAttribute('font-size', '11');
+    lbl.setAttribute('font-family', 'var(--font-sans)');
+    lbl.textContent = p.label.length > 14 ? p.label.slice(0, 13) + '…' : p.label;
+    gNodes.appendChild(lbl);
+
+    // initial chip inside the circle for peers
+    if (p.kind === 'peer') {
+      const init = document.createElementNS(ns, 'text');
+      init.setAttribute('x', p.x); init.setAttribute('y', p.y + 4);
+      init.setAttribute('text-anchor', 'middle');
+      init.setAttribute('fill', '#fff');
+      init.setAttribute('font-size', '10');
+      init.setAttribute('font-weight', '700');
+      init.setAttribute('font-family', 'var(--font-mono)');
+      init.textContent = initials(p.label).slice(0, 2);
+      gNodes.appendChild(init);
+    }
+  }
+  svg.appendChild(gNodes);
+}
+function hash(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+// ---------- chart ----------------------------------------------------------
 let chart;
 function initChart() {
   const ctx = $('msgChart').getContext('2d');
-  const grad = ctx.createLinearGradient(0, 0, 0, 220);
-  grad.addColorStop(0, 'rgba(13,138,115,0.18)');
-  grad.addColorStop(1, 'rgba(13,138,115,0.0)');
+  const grad = ctx.createLinearGradient(0, 0, 0, 200);
+  grad.addColorStop(0, 'rgba(20,160,133,0.20)');
+  grad.addColorStop(1, 'rgba(20,160,133,0.0)');
   chart = new Chart(ctx, {
     type: 'line',
     data: {
       labels: Array.from({length: HISTORY_POINTS}, (_, i) => i),
       datasets: [
-        {
-          label: 'total',
-          data: Array(HISTORY_POINTS).fill(0),
-          borderColor: '#0d8a73',
-          backgroundColor: grad,
-          borderWidth: 2,
-          tension: 0.3,
-          pointRadius: 0,
-          fill: true,
-        },
-        {
-          label: 'delta',
-          data: Array(HISTORY_POINTS).fill(0),
-          borderColor: '#aab3bf',
-          borderWidth: 1,
-          borderDash: [3, 3],
-          tension: 0.2,
-          pointRadius: 0,
-          fill: false,
-          yAxisID: 'y1',
-        },
+        { data: Array(HISTORY_POINTS).fill(0), borderColor: '#14a085', backgroundColor: grad, borderWidth: 2, tension: 0.3, pointRadius: 0, fill: true },
+        { data: Array(HISTORY_POINTS).fill(0), borderColor: '#aab3bf', borderWidth: 1, borderDash: [3,3], tension: 0.2, pointRadius: 0, fill: false, yAxisID: 'y1' },
       ],
     },
     options: {
       animation: { duration: 250 },
       maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: { mode: 'index', intersect: false,
-                   backgroundColor: 'rgba(20,30,50,0.95)',
-                   titleColor: '#fff', bodyColor: '#e6eaf2',
-                   borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
-                   padding: 10, cornerRadius: 6, displayColors: false },
-      },
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, backgroundColor: 'rgba(15,22,34,0.95)', titleColor: '#fff', bodyColor: '#e8edf5', padding: 10, cornerRadius: 6, displayColors: false } },
       scales: {
         x: { display: false },
-        y: { position: 'left', grid: { color: 'rgba(0,0,0,0.05)' },
-             ticks: { color: '#7d8794', font: { size: 11 } }, beginAtZero: true },
-        y1: { position: 'right', grid: { display: false },
-              ticks: { color: '#aab3bf', font: { size: 11 } }, beginAtZero: true },
+        y: { position: 'left', grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#6a7585', font: { size: 11 } }, beginAtZero: true },
+        y1: { position: 'right', grid: { display: false }, ticks: { color: '#aab3bf', font: { size: 11 } }, beginAtZero: true },
       },
     },
   });
@@ -1177,7 +1039,7 @@ function pushChartPoint(total, delta) {
   chart.update('none');
 }
 
-// ---------- main loop -------------------------------------------------------
+// ---------- main loop ------------------------------------------------------
 async function fetchSnapshot() {
   try {
     const url = `/api/snapshot${state.ws ? '?workspace=' + encodeURIComponent(state.ws) : ''}`;
@@ -1185,33 +1047,31 @@ async function fetchSnapshot() {
     if (!r.ok) throw new Error('http ' + r.status);
     const data = await r.json();
 
-    renderToolbar(data.workspaces, data.active_workspace);
     state.ws = data.active_workspace;
     state.peers = data.peers;
-
+    renderToolbar(data.workspaces, data.active_workspace, data.workspace_meta || {});
+    renderSystem(data.system || {}, data.deriver_config || {}, data.queue || {});
     renderAdvisors((data.diagnostics || {}).advisors);
-    renderKpis(data.totals);
+    renderGraph(data.graph || {nodes: [], edges: []});
+    renderAnatomy(data);
     renderDeriver(data.queue || {});
-    renderSessions(data.sessions, data.diagnostics || {});
+    renderSessions(data.sessions);
     renderPeers(data.peers);
     renderFeed(data.activity);
-    renderTotals(data.totals, data.queue);
     renderMemoryState(data.memory_state || {});
     renderUsage(data.usage || {});
+    renderTotals(data.totals, data.queue);
 
-    // chart
     const total = data.totals.messages;
-    const prev = state.prevTotals;
-    const delta = prev ? Math.max(0, total - prev.messages) : 0;
+    const delta = state.prevTotals ? Math.max(0, total - state.prevTotals.messages) : 0;
     pushChartPoint(total, delta);
     $('msgs-now').textContent = formatNum(total);
     $('msgs-delta').textContent = '+' + formatNum(delta);
     $('msgs-total').textContent = formatNum(total);
 
-    if (delta > 0 && prev) {
+    if (delta > 0 && state.prevTotals) {
       log(`<b>+${delta}</b> new message${delta === 1 ? '' : 's'} in workspace <b>${data.active_workspace}</b>`);
     }
-
     state.prevTotals = data.totals;
     $('last-updated').textContent = 'updated ' + new Date().toLocaleTimeString();
     $('polling-badge').textContent = `${(1000 / POLL_MS).toFixed(1)}Hz`;
@@ -1220,7 +1080,7 @@ async function fetchSnapshot() {
   }
 }
 
-// ---------- dream action ----------------------------------------------------
+// ---------- dream action ---------------------------------------------------
 async function triggerDream() {
   const btn = $('dream-btn');
   btn.disabled = true;
@@ -1230,17 +1090,15 @@ async function triggerDream() {
     const body = { observer, dream_type: 'omni' };
     const r = await fetch(`/api/dream?workspace=${encodeURIComponent(state.ws || 'hermes')}`,
       { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-    let j = {};
-    try { j = await r.json(); } catch (_) {}
-    const upstreamStatus = j.status;
-    const accepted = (j.ok === true) || (typeof upstreamStatus === 'number' && upstreamStatus >= 200 && upstreamStatus < 300);
-    if (accepted) {
-      const detail = upstreamStatus === 204 ? 'queued (Honcho 204, no body)' : `queued (Honcho ${upstreamStatus})`;
-      log(`<b>dream scheduled</b> · observer=<b>${escapeHtml(observer)}</b> · omni · ${detail}`, 'ok');
+    let j = {}; try { j = await r.json(); } catch (_) {}
+    const u = j.status;
+    const ok = (j.ok === true) || (typeof u === 'number' && u >= 200 && u < 300);
+    if (ok) {
+      log(`<b>dream scheduled</b> · observer=<b>${escapeHtml(observer)}</b> · omni · queued (Honcho ${u})`, 'ok');
     } else {
-      const what = typeof upstreamStatus === 'number' ? `upstream rejected ${upstreamStatus}` : 'proxy error';
-      const detail = typeof j.resp === 'string' ? j.resp : (j.resp ? JSON.stringify(j.resp) : '');
-      log(`<b>dream failed</b> · ${what}` + (detail ? ` · ${escapeHtml(detail.slice(0,200))}` : ''), 'err');
+      const what = typeof u === 'number' ? `upstream rejected ${u}` : 'proxy error';
+      const det = typeof j.resp === 'string' ? j.resp : (j.resp ? JSON.stringify(j.resp) : '');
+      log(`<b>dream failed</b> · ${what}` + (det ? ` · ${escapeHtml(det.slice(0,200))}` : ''), 'err');
     }
   } catch (err) {
     log('dream error: ' + err.message, 'err');
@@ -1254,22 +1112,11 @@ async function triggerDream() {
 initChart();
 $('dream-btn').onclick = triggerDream;
 $('refresh-btn').onclick = fetchSnapshot;
-$('usage-reset').onclick = async () => {
-  await fetch('/api/usage/reset', { method: 'POST' });
-  fetchSnapshot();
-};
+$('usage-reset').onclick = async () => { await fetch('/api/usage/reset', { method: 'POST' }); fetchSnapshot(); };
+$('graph-reset').onclick = () => fetchSnapshot();
 fetchSnapshot();
 log('dashboard online · proxying <b>http://127.0.0.1:8000</b>', 'ok');
 setInterval(fetchSnapshot, POLL_MS);
-
-// Tick freshness chips every 30s so "5m ago" becomes "6m ago" without a poll.
-setInterval(() => {
-  document.querySelectorAll('.badge.fresh, .badge.stale, .badge.cold').forEach(() => {
-    // We need to re-render to refresh relative times. Trigger a soft refresh.
-    const ts = state.prevTotals; if (!ts) return;
-  });
-  fetchSnapshot();
-}, 30_000);
 </script>
 </body>
 </html>
