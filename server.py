@@ -297,6 +297,31 @@ def dashboard_snapshot(workspace: str | None = None) -> dict:
     # 8) usage: just the rolling-window summary (lightweight)
     USAGE.snapshot_total()
     out["usage"] = USAGE.summarise(window_seconds=60)
+
+    # 9) diagnostics — honest signal about the state of the deriver.
+    # The user-visible problem: queue WUs complete but conclusions never land.
+    # This block describes the upstream cause without lying about it.
+    advisors = []
+    if total_msgs > 0 and total_conclusions == 0 and queue.get("completed_work_units", 0) > 0:
+        advisors.append({
+            "level": "warn",
+            "title": "Deriver is processing but no conclusions are landing",
+            "body": ("Honcho's deriver queue is completing work units, but no conclusions "
+                     "are being extracted. This is almost always one of: "
+                     "(1) deriver model doesn't support structured output — switch to a model "
+                     "that does; (2) deriver's API key env var is unresolved; "
+                     "(3) REPRESENTATION_BATCH_MAX_TOKENS is set too high for the volume of "
+                     "messages present (default is the 1024-token gate)."),
+        })
+    if peers and total_card_chars == 0 and queue.get("completed_work_units", 0) > 0:
+        advisors.append({
+            "level": "info",
+            "title": "Peer cards are empty",
+            "body": ("Peer cards are the per-peer summarization Honcho writes. They are empty "
+                     "when the deriver hasn't run a card-update cycle yet, or when the same "
+                     "upstream issue blocks conclusion extraction."),
+        })
+    out["diagnostics"] = {"advisors": advisors, "checked_at": time.time()}
     return out
 
 

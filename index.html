@@ -1,516 +1,1150 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Honcho Dashboard</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Honcho Control — Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
+  /* ----------------------------------------------------------
+     Tokens
+  ---------------------------------------------------------- */
   :root {
-    --bg-0: #06080c;
-    --bg-1: #0c1118;
-    --bg-2: #131a24;
-    --bg-3: #1a2333;
-    --line: #1f2a3a;
-    --ink: #d8e1ec;
-    --ink-dim: #6b7a8d;
-    --accent: #4ee0c1;
-    --accent-2: #6aa6ff;
-    --warn: #ffb547;
-    --bad: #ff5d6c;
-    --glow: 0 0 18px rgba(78, 224, 193, 0.35);
+    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+                 "Inter", "Segoe UI", system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo,
+                 "Cascadia Code", Consolas, monospace;
+
+    /* Surface — muted, not pure black. OLED users get true black bg. */
+    --bg:        #f7f8fa;
+    --bg-raised: #ffffff;
+    --bg-sunken: #eef0f4;
+    --line:      #e2e6ec;
+    --line-soft: #ecf0f4;
+
+    /* Ink — high-contrast text, dim for de-emphasised */
+    --ink:       #1a2230;
+    --ink-2:     #4a5567;
+    --ink-3:     #7d8794;
+    --ink-4:     #aab3bf;
+
+    /* One accent (teal). Single-coloured dashboards read cleaner. */
+    --accent:    #0d8a73;
+    --accent-2:  #0a6e5c;
+    --accent-bg: rgba(13,138,115,0.08);
+
+    /* Semantic. Used sparingly — banners, freshness chips. */
+    --warn:      #b86b00;
+    --warn-bg:   #fff5e0;
+    --bad:       #b3261e;
+    --bad-bg:    #fde8e6;
+    --ok:        #166534;
+    --ok-bg:     #e7f5ec;
+
+    /* Geometry */
+    --r-sm: 4px;
+    --r:    8px;
+    --r-lg: 12px;
+    --shadow-sm: 0 1px 0 rgba(20,30,50,0.04);
+    --shadow:    0 1px 2px rgba(20,30,50,0.06), 0 0 0 1px var(--line);
+    --shadow-lg: 0 4px 16px rgba(20,30,50,0.08), 0 0 0 1px var(--line);
   }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--ink);
-    font: 13px/1.45 -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, monospace;
-    min-height: 100vh; }
-  body::before {
-    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-    background:
-      radial-gradient(ellipse at 20% 0%, rgba(78,224,193,0.06), transparent 50%),
-      radial-gradient(ellipse at 90% 100%, rgba(106,166,255,0.06), transparent 60%),
-      linear-gradient(transparent 95%, rgba(78,224,193,0.04) 95%),
-      linear-gradient(90deg, transparent 95%, rgba(106,166,255,0.04) 95%);
-    background-size: 100% 100%, 100% 100%, 28px 28px, 28px 28px;
-    animation: drift 30s linear infinite;
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:        #0c0e12;
+      --bg-raised: #141820;
+      --bg-sunken: #08090d;
+      --line:      #1f2530;
+      --line-soft: #181d27;
+      --ink:       #e6eaf2;
+      --ink-2:     #aab3c1;
+      --ink-3:     #7d8794;
+      --ink-4:     #4a5567;
+      --accent:    #4ee0c1;
+      --accent-2:  #6aa6ff;
+      --accent-bg: rgba(78,224,193,0.08);
+      --warn-bg:   rgba(184,107,0,0.15);
+      --bad-bg:    rgba(179,38,30,0.15);
+      --ok-bg:     rgba(22,101,52,0.18);
+      --shadow:    0 1px 0 rgba(0,0,0,0.4), 0 0 0 1px var(--line);
+      --shadow-lg: 0 4px 16px rgba(0,0,0,0.5), 0 0 0 1px var(--line);
+    }
   }
-  @keyframes drift { from { background-position: 0 0, 0 0, 0 0, 0 0; }
-                     to   { background-position: 0 0, 0 0, 28px 28px, 28px 28px; } }
+
+  /* ----------------------------------------------------------
+     Reset / base
+  ---------------------------------------------------------- */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100vh; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  .mono { font-family: var(--font-mono); font-size: 0.92em; }
+
+  /* ----------------------------------------------------------
+     Layout
+  ---------------------------------------------------------- */
+  .page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 24px 28px 80px;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 24px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+  }
+  .brand-mark {
+    width: 22px; height: 22px;
+    border-radius: var(--r-sm);
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 11px;
+    font-family: var(--font-mono);
+  }
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+
+  .toolbar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .pill {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: var(--bg-raised);
+    color: var(--ink-2);
+    font: inherit;
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: 0.15s;
+  }
+  .pill:hover { color: var(--ink); border-color: var(--ink-4); }
+  .pill[aria-pressed="true"], .pill.is-active {
+    color: var(--accent-2);
+    border-color: var(--accent);
+    background: var(--accent-bg);
+    font-weight: 500;
+  }
+
+  /* ----------------------------------------------------------
+     Cards / panels
+  ---------------------------------------------------------- */
+  .panel {
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line-soft);
+    gap: 10px;
+  }
+  .panel-title {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    margin: 0;
+  }
+  .panel-body {
+    padding: 16px 18px;
+    flex: 1;
+  }
+  .panel-body.flush { padding: 0; }
+
+  /* popover hint */
+  .hint {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 1px solid var(--ink-4);
+    color: var(--ink-3);
+    font-size: 10px;
+    cursor: help;
+    position: relative;
+    margin-left: 4px;
+    user-select: none;
+  }
+  .hint:hover, .hint:focus { color: var(--accent-2); border-color: var(--accent); outline: none; }
+  .hint[data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 280px;
+    padding: 8px 12px;
+    background: var(--ink);
+    color: var(--bg);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.45;
+    border-radius: var(--r-sm);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+    z-index: 100;
+    text-align: left;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .hint:hover::after, .hint:focus::after { opacity: 1; }
+
+  /* ----------------------------------------------------------
+     KPI strip
+  ---------------------------------------------------------- */
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 1100px) { .kpis { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 600px)  { .kpis { grid-template-columns: repeat(2, 1fr); } }
+  .kpi {
+    background: var(--bg-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+  }
+  .kpi-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink-3);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+  }
+  .kpi-value {
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.1;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+  .kpi-sub {
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .kpi.accent .kpi-value { color: var(--accent-2); }
+  .kpi.warn   .kpi-value { color: var(--warn); }
+
+  /* ----------------------------------------------------------
+     Main grid
+  ---------------------------------------------------------- */
+  .grid-main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .grid-mid, .grid-list {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .grid-mid  { grid-template-columns: 1fr 1fr; }
+  .grid-list { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 900px) {
+    .grid-main, .grid-mid, .grid-list { grid-template-columns: 1fr; }
+  }
+
+  /* ----------------------------------------------------------
+     Deriver card content
+  ---------------------------------------------------------- */
+  .deriver-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px 16px;
+    align-items: baseline;
+  }
+  .deriver-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--ink-4);
+    color: var(--bg-raised);
+  }
+  .deriver-status-pill.busy { background: var(--accent); }
+  .deriver-status-pill.idle { background: var(--ink-4); }
+  .progress {
+    height: 6px;
+    background: var(--bg-sunken);
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 14px 0 12px;
+  }
+  .progress > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    border-radius: inherit;
+    transition: width 0.5s cubic-bezier(0.2, 0, 0.2, 1);
+  }
+  .progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: var(--bg-raised);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: 0.15s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent-2); }
+  .btn.primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  .btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* pulsing dot */
+  .pulse {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .pulse.live { animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
-  @keyframes spin { to { transform: rotate(360deg); } }
 
-  .wrap { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 18px 22px 60px; }
-
-  header { display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 0 18px; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
-  h1 { margin: 0; font-size: 18px; letter-spacing: 0.18em; font-weight: 600;
-    color: var(--ink); text-transform: uppercase; }
-  h1 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-    margin-right: 10px; background: var(--accent); box-shadow: var(--glow);
-    animation: pulse 1.6s ease-in-out infinite; vertical-align: middle; }
-
-  .tabs { display: flex; gap: 6px; align-items: center; }
-  .tab { padding: 6px 12px; border: 1px solid var(--line); border-radius: 4px;
-    background: var(--bg-1); color: var(--ink-dim); cursor: pointer;
-    font-family: inherit; font-size: 12px; transition: 0.2s; }
-  .tab:hover { color: var(--ink); border-color: var(--accent-2); }
-  .tab.active { color: var(--accent); border-color: var(--accent);
-    background: rgba(78,224,193,0.08); box-shadow: var(--glow); }
-  .refresh { margin-left: 14px; color: var(--ink-dim); font-size: 11px; }
-  .refresh .ind { display: inline-block; width: 6px; height: 6px; border-radius: 50%;
-    background: var(--accent); margin-right: 6px; vertical-align: middle;
-    animation: pulse 1.2s ease-in-out infinite; }
-
-  /* grid */
-  .grid { display: grid; gap: 14px; }
-  .g-kpi { grid-template-columns: repeat(6, 1fr); margin-bottom: 14px; }
-  .g-main { grid-template-columns: 1.4fr 1fr; }
-  .g-mid { grid-template-columns: 1fr 1fr; margin-top: 14px; }
-  .g-list { grid-template-columns: 1fr 1fr; margin-top: 14px; }
-  @media (max-width: 1000px) { .g-kpi, .g-main, .g-mid, .g-list { grid-template-columns: 1fr; } }
-
-  /* card */
-  .card { background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
-    border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px;
-    position: relative; overflow: hidden; }
-  .card::before { content: ""; position: absolute; left: 0; top: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: 0.6; }
-  .card h2 { margin: 0 0 10px; font-size: 11px; letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--ink-dim); font-weight: 600; }
-
-  /* kpi */
-  .kpi { background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
-    border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
-    position: relative; overflow: hidden; }
-  .kpi .label { font-size: 10px; letter-spacing: 0.18em;
-    text-transform: uppercase; color: var(--ink-dim); }
-  .kpi .val { font-size: 26px; font-weight: 600; margin-top: 6px;
-    color: var(--ink); font-feature-settings: "tnum"; }
-  .kpi .sub { font-size: 11px; color: var(--ink-dim); margin-top: 2px; }
-  .kpi.accent .val { color: var(--accent); }
-  .kpi.blue .val { color: var(--accent-2); }
-  .kpi.warn .val { color: var(--warn); }
-  .kpi.bad .val { color: var(--bad); }
-
-  /* deriver card */
-  .deriver { display: flex; flex-direction: column; gap: 8px; }
-  .deriver-bar { height: 8px; background: var(--bg-3); border-radius: 4px; overflow: hidden;
-    position: relative; }
-  .deriver-bar > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2));
-    box-shadow: var(--glow); transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
-  .deriver-meta { display: flex; justify-content: space-between; color: var(--ink-dim);
-    font-size: 11px; }
-  .deriver-status { display: flex; align-items: center; gap: 6px; font-size: 12px; }
-  .deriver-status.idle .pulse { background: var(--ink-dim); }
-  .deriver-status.busy .pulse { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
-  .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
-
-  /* session list */
-  .list { display: flex; flex-direction: column; gap: 10px; max-height: 380px; overflow: auto; }
-  .list::-webkit-scrollbar { width: 6px; }
-  .list::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 3px; }
-  .session, .peer { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px;
-    background: var(--bg-1); transition: 0.2s; }
-  .session:hover, .peer:hover { border-color: var(--accent-2); }
-  .session .h, .peer .h { display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 6px; }
-  .session .id, .peer .id { color: var(--accent); font-weight: 600; font-size: 12px; }
-  .session .meta { color: var(--ink-dim); font-size: 11px;
-    display: flex; gap: 12px; margin-bottom: 6px; flex-wrap: wrap; }
-  .session .meta span { display: inline-flex; align-items: center; gap: 4px; }
-  .session .summary { color: var(--ink); font-size: 12px; opacity: 0.85;
-    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
-    overflow: hidden; }
-  .session .lastmsg { color: var(--ink-dim); font-size: 11px; margin-top: 4px;
-    font-style: italic; opacity: 0.75;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-
-  .badge { padding: 2px 7px; border-radius: 3px; font-size: 10px;
-    letter-spacing: 0.1em; text-transform: uppercase; }
-  .badge.on { background: rgba(78,224,193,0.15); color: var(--accent); }
-  .badge.off { background: rgba(255,93,108,0.12); color: var(--bad); }
-
-  /* activity feed */
-  .feed { max-height: 380px; overflow: auto; font-size: 11.5px; }
-  .feed::-webkit-scrollbar { width: 6px; }
-  .feed::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 3px; }
-  .feed-row { padding: 8px 0; border-bottom: 1px dashed var(--line); }
-  .feed-row:last-child { border-bottom: none; }
-  .feed-row .top { display: flex; justify-content: space-between;
-    color: var(--ink-dim); font-size: 10px; letter-spacing: 0.1em;
-    text-transform: uppercase; margin-bottom: 4px; }
-  .feed-row .peer { color: var(--accent-2); }
-  .feed-row .msg { color: var(--ink); opacity: 0.9;
-    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    overflow: hidden; }
-
-  /* buttons */
-  .actions { display: flex; gap: 8px; margin-top: 8px; }
-  button { font-family: inherit; cursor: pointer; padding: 8px 14px;
-    border-radius: 5px; border: 1px solid var(--line); background: var(--bg-2);
-    color: var(--ink); font-size: 12px; letter-spacing: 0.1em;
-    text-transform: uppercase; transition: 0.2s; }
-  button:hover { border-color: var(--accent); color: var(--accent); }
-  button.primary { background: linear-gradient(180deg, rgba(78,224,193,0.18), rgba(78,224,193,0.05));
-    border-color: var(--accent); color: var(--accent); box-shadow: var(--glow); }
-  button.primary:hover { filter: brightness(1.15); }
-  button.primary:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
-  button .spinner { display: none; margin-left: 8px; width: 10px; height: 10px;
-    border: 2px solid var(--accent); border-top-color: transparent; border-radius: 50%;
-    animation: spin 0.8s linear infinite; vertical-align: middle; }
-  button.loading .spinner { display: inline-block; }
-
-  .chart-wrap { height: 220px; position: relative; }
-
-  .empty { color: var(--ink-dim); font-style: italic; padding: 18px; text-align: center; }
-
-  .stat-row { display: flex; justify-content: space-between; padding: 4px 0;
-    font-size: 12px; border-bottom: 1px solid var(--line); }
-  .stat-row:last-child { border-bottom: none; }
-  .stat-row .k { color: var(--ink-dim); }
-  .stat-row .v { color: var(--ink); font-feature-settings: "tnum"; }
-
-  /* log console */
-  .log { font-size: 11px; max-height: 220px; overflow: auto;
-    background: var(--bg-0); border: 1px solid var(--line); border-radius: 4px;
-    padding: 8px 10px; }
-  .log::-webkit-scrollbar { width: 6px; }
-  .log::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 3px; }
-  .log-row { color: var(--ink-dim); padding: 1px 0; }
-  .log-row .ts { color: var(--accent-2); margin-right: 6px; }
+  /* event log */
+  .log {
+    margin-top: 16px;
+    background: var(--bg-sunken);
+    border-radius: var(--r-sm);
+    padding: 10px 12px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .log-row { color: var(--ink-2); padding: 2px 0; line-height: 1.4; }
+  .log-row .ts { color: var(--ink-4); margin-right: 8px; }
+  .log-row.ok  { color: var(--ok); }
   .log-row.err { color: var(--bad); }
-  .log-row.ok { color: var(--accent); }
+  .log-row b { font-weight: 600; color: var(--accent-2); }
+
+  /* ----------------------------------------------------------
+     Chart card
+  ---------------------------------------------------------- */
+  .chart-wrap { position: relative; height: 220px; }
+  .chart-stats {
+    display: flex;
+    gap: 24px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-soft);
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .chart-stats > div { display: flex; align-items: baseline; gap: 6px; }
+  .chart-stats .v { color: var(--ink); font-weight: 500; }
+  .chart-stats .v.accent { color: var(--accent-2); }
+
+  /* ----------------------------------------------------------
+     Lists — sessions, peers
+  ---------------------------------------------------------- */
+  .scroll {
+    overflow-y: auto;
+    max-height: 420px;
+    padding: 4px;
+  }
+  .row {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line-soft);
+    transition: background 0.15s;
+  }
+  .row:last-child { border-bottom: none; }
+  .row:hover { background: var(--bg-sunken); }
+  .row-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .row-id {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--ink);
+    font-family: var(--font-mono);
+    letter-spacing: -0.01em;
+  }
+  .row-id.muted { color: var(--ink-2); font-weight: 500; font-family: var(--font-sans); }
+  .row-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--ink-3);
+    margin: 6px 0 8px;
+    flex-wrap: wrap;
+  }
+  .row-meta span { display: inline-flex; align-items: center; gap: 4px; }
+  .row-meta .num { color: var(--ink-2); font-weight: 500; }
+  .row-body {
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .row-body.empty {
+    color: var(--ink-4);
+    font-style: italic;
+  }
+
+  /* ----------------------------------------------------------
+     Freshness chips + status badges
+  ---------------------------------------------------------- */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--bg-sunken);
+    color: var(--ink-2);
+  }
+  .badge.fresh { background: var(--ok-bg); color: var(--ok); }
+  .badge.stale { background: var(--warn-bg); color: var(--warn); }
+  .badge.cold  { background: var(--bg-sunken); color: var(--ink-3); }
+  .badge.has   { background: var(--accent-bg); color: var(--accent-2); }
+
+  /* ----------------------------------------------------------
+     Diagnostics banners
+  ---------------------------------------------------------- */
+  .advisors {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .advisor {
+    border: 1px solid var(--line);
+    border-left-width: 3px;
+    border-radius: var(--r-sm);
+    padding: 12px 16px;
+    font-size: 13px;
+    background: var(--bg-raised);
+  }
+  .advisor.warn   { border-left-color: var(--warn); background: var(--warn-bg); color: var(--ink); }
+  .advisor.info   { border-left-color: var(--accent); }
+  .advisor-title  { font-weight: 600; margin-bottom: 4px; }
+  .advisor-body   { color: var(--ink-2); line-height: 1.5; }
+
+  /* ----------------------------------------------------------
+     Stat rows (memory state, usage)
+  ---------------------------------------------------------- */
+  .stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 13px;
+  }
+  .stat:last-child { border-bottom: none; }
+  .stat .k { color: var(--ink-3); }
+  .stat .v { color: var(--ink); font-weight: 500; }
+  .stat.highlight { padding-top: 12px; margin-top: 4px; border-top: 1px solid var(--line); }
+  .stat.highlight .k { color: var(--accent-2); font-weight: 500; }
+  .stat.highlight .v { color: var(--accent-2); font-size: 16px; }
+
+  .footnote {
+    font-size: 11.5px;
+    color: var(--ink-3);
+    line-height: 1.5;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-soft);
+  }
+  .footnote em { color: var(--ink-2); font-style: normal; font-weight: 500; }
+
+  .ep-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 12px;
+    align-items: baseline;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 12px;
+  }
+  .ep-row:last-child { border-bottom: none; }
+  .ep-row .ep-path { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); word-break: break-all; }
+  .ep-row .v { font-variant-numeric: tabular-nums; color: var(--ink); }
+  .ep-row .v.lat { color: var(--ink-3); }
+  .ep-row .v.err { color: var(--bad); }
+
+  /* feed items (Recent Messages) */
+  .feed-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--ink-4);
+    font-style: italic;
+  }
+  .empty-state {
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--ink-3);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* tiny avatar chip for peers/feed */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--accent-bg);
+    color: var(--accent-2);
+    font-size: 11px;
+    font-weight: 600;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+  .peer-card-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* footer */
+  .foot {
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink-3);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .foot code { font-family: var(--font-mono); background: var(--bg-sunken); padding: 2px 6px; border-radius: 3px; }
+
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <h1><span class="dot"></span>HONCHO · LIVE</h1>
-    <div class="tabs" id="tabs">
-      <span class="refresh"><span class="ind"></span><span id="refresh-ts">…</span></span>
+<div class="page">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">H</span>
+      <span>Honcho Control</span>
+    </div>
+    <div class="topbar-right">
+      <span><span class="pulse live" style="color:var(--accent)"></span>
+        <span id="last-updated">connecting…</span>
+      </span>
     </div>
   </header>
 
-  <!-- KPIs -->
-  <div class="grid g-kpi" id="kpis"></div>
-
-  <!-- main row: deriver + chart -->
-  <div class="grid g-main">
-    <div class="card deriver">
-      <h2>Deriver Queue</h2>
-      <div class="deriver-status" id="deriver-status"><span class="pulse"></span><span id="deriver-label">idle</span></div>
-      <div class="deriver-bar"><div id="deriver-bar" style="width:0%"></div></div>
-      <div class="deriver-meta">
-        <span id="deriver-progress-label">0 / 0 work units completed</span>
-        <span id="deriver-pending-label">0 pending · 0 in progress</span>
-      </div>
-      <div class="actions">
-        <button id="dream-btn" class="primary">Dream Now <span class="spinner"></span></button>
-        <button id="refresh-btn">Force Refresh</button>
-      </div>
-      <div class="log" id="log" style="margin-top:10px"></div>
-    </div>
-
-    <div class="card">
-      <h2>Activity Stream · last 60s</h2>
-      <div class="chart-wrap"><canvas id="msgChart"></canvas></div>
-      <div id="chart-stats" style="display:flex;gap:18px;margin-top:8px;font-size:11px;color:var(--ink-dim)">
-        <div>now: <span id="msgs-now" style="color:var(--accent)">0</span></div>
-        <div>1m Δ: <span id="msgs-delta" style="color:var(--accent-2)">0</span></div>
-        <div>total: <span id="msgs-total" style="color:var(--ink)">0</span></div>
-      </div>
-    </div>
+  <div class="toolbar" id="toolbar">
+    <button class="pill is-active" disabled>workspace…</button>
   </div>
 
-  <!-- mid: sessions + peers -->
-  <div class="grid g-mid">
-    <div class="card">
-      <h2>Sessions</h2>
-      <div class="list" id="sessions"></div>
-    </div>
-    <div class="card">
-      <h2>Peers</h2>
-      <div class="list" id="peers"></div>
-    </div>
-  </div>
+  <div class="advisors" id="advisors"></div>
 
-  <!-- feed + totals -->
-  <div class="grid g-list">
-    <div class="card">
-      <h2>Recent Messages</h2>
-      <div class="feed" id="feed"></div>
-    </div>
-    <div class="card">
-      <h2>Workspace Totals</h2>
-      <div id="totals"></div>
-    </div>
-  </div>
+  <div class="kpis" id="kpis"></div>
 
-  <!-- memory state + proxy usage -->
-  <div class="grid g-list" style="margin-top:14px">
-    <div class="card">
-      <h2>Memory State (cost surrogate)</h2>
-      <div id="memory-state"></div>
-    </div>
-    <div class="card">
-      <h2>Proxy Usage · last 60s</h2>
-      <div id="usage"></div>
-      <div class="actions" style="margin-top:8px">
-        <button id="usage-reset" style="padding:4px 10px;font-size:10px">Reset Counter</button>
+  <div class="grid-main">
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Deriver Queue
+          <span class="hint" tabindex="0"
+                data-tip="Honcho's deriver is a background worker that extracts facts (conclusions) from your messages. The queue tracks pending, in-progress, and completed work units (WUs). Click 'Dream Now' to manually schedule a consolidation run across all messages.">i</span>
+        </h2>
+        <div id="deriver-status-host"></div>
       </div>
-    </div>
+      <div class="panel-body">
+        <div class="deriver-row">
+          <div>
+            <div id="deriver-progress-label" style="font-size:13px;color:var(--ink-2)">—</div>
+          </div>
+          <span id="deriver-summary-pill"></span>
+        </div>
+        <div class="progress"><span id="deriver-bar" style="width:0%"></span></div>
+        <div class="progress-meta">
+          <span id="deriver-pending">— pending</span>
+          <span id="deriver-total">—</span>
+        </div>
+        <div class="actions">
+          <button class="btn primary" id="dream-btn">Run dream now</button>
+          <button class="btn" id="refresh-btn">Refresh</button>
+        </div>
+        <div class="log" id="log"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Message Activity · last 2 minutes
+          <span class="hint" tabindex="0"
+                data-tip="Total message count across all sessions. Rolling 2-minute view. 'Now' shows the current total; '1m delta' shows messages added in the last minute; 'total' is the lifetime sum.">i</span>
+        </h2>
+        <span class="badge" id="polling-badge">polling…</span>
+      </div>
+      <div class="panel-body">
+        <div class="chart-wrap"><canvas id="msgChart"></canvas></div>
+        <div class="chart-stats">
+          <div>now<span class="v num accent" id="msgs-now">0</span></div>
+          <div>1m Δ<span class="v num" id="msgs-delta">+0</span></div>
+          <div>total<span class="v num" id="msgs-total">0</span></div>
+        </div>
+      </div>
+    </section>
+
   </div>
+
+  <div class="grid-mid">
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Sessions
+          <span class="hint" tabindex="0"
+                data-tip="A session is a conversation thread. Each user/agent pair gets its own session. The dashboard polls every session for new messages and shows the latest summary the deriver has produced.">i</span>
+        </h2>
+        <span class="badge" id="sessions-count">0</span>
+      </div>
+      <div class="panel-body flush">
+        <div class="scroll" id="sessions"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Peers
+          <span class="hint" tabindex="0"
+                data-tip="A peer is one participant in a conversation — you, the assistant, or an external user. Each peer accumulates its own card (a model of who they are) and its own extracted conclusions (facts learned). Click the username to filter by peer.">i</span>
+        </h2>
+        <span class="badge" id="peers-count">0</span>
+      </div>
+      <div class="panel-body flush">
+        <div class="scroll" id="peers"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="grid-list">
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Recent Messages
+          <span class="hint" tabindex="0"
+                data-tip="The latest message from each session. Fresh (<1h) entries show a green chip; older entries show their actual age so you can spot stale sessions quickly.">i</span>
+        </h2>
+      </div>
+      <div class="panel-body flush">
+        <div class="scroll" id="feed"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Memory State
+          <span class="hint" tabindex="0"
+                data-tip="Honcho's REST API does not expose token counts. These character counts are a surrogate: divide by 4 for an approximate English token estimate. For real numbers, instrument your LLM provider or scrape deriver logs.">i</span>
+        </h2>
+        <span class="badge" id="memory-total">~0 tokens</span>
+      </div>
+      <div class="panel-body">
+        <div id="memory-state"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="grid-list">
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Proxy Usage · last 60s
+          <span class="hint" tabindex="0"
+                data-tip="Volume, latency, and error counts for the calls THIS dashboard makes to Honcho. This is the dashboard's overhead, not Honcho's internal LLM usage — Honcho does not surface that.">i</span>
+        </h2>
+        <button class="btn" id="usage-reset" style="padding:4px 10px;font-size:12px">Reset</button>
+      </div>
+      <div class="panel-body">
+        <div id="usage"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Workspace Totals</h2>
+      </div>
+      <div class="panel-body">
+        <div id="totals"></div>
+      </div>
+    </section>
+  </div>
+
+  <footer class="foot">
+    <div>Honcho Control · stdlib-only proxy · source on <code id="gh-link">github.com/PraveenKumarSridhar/honcho-control-dashboard</code></div>
+    <div>proxying <code id="honcho-host">127.0.0.1:8000</code> · serving on <code>127.0.0.1:7777</code></div>
+  </footer>
 
 </div>
 
 <script>
 // ---------------------------------------------------------------------------
 const POLL_MS = 2500;
-const HISTORY_POINTS = 60;          // 60 ticks × 2.5s = 150s rolling window
-const MAX_DELTA_KEEP = 600;         // 10 min message timestamp retention
+const HISTORY_POINTS = 48;     // 48 ticks × 2.5s = 120s rolling window
 
 const state = {
   ws: null,
-  prevTotals: null,                 // {total, ...} from previous fetch
-  totalsHistory: [],                // array of {t, total, delta}
-  lastMsgIds: new Set(),            // message ids seen, for "new" detection
-  msgTimestamps: [],                // number[] of recent message times for delta calc
+  prevTotals: null,
+  peers: [],
+  ws_id: null,
 };
 
+// ---------- helpers --------------------------------------------------------
 const $ = (id) => document.getElementById(id);
-const logBox = $('log');
-function log(msg, level = '') {
-  const row = document.createElement('div');
-  row.className = 'log-row ' + level;
-  const ts = new Date().toLocaleTimeString();
-  row.innerHTML = `<span class="ts">${ts}</span>${msg}`;
-  logBox.prepend(row);
-  while (logBox.children.length > 80) logBox.removeChild(logBox.lastChild);
-}
 
-// ---------- tabs -------------------------------------------------------------
-function renderTabs(workspaces, active) {
-  const tabs = $('tabs');
-  // preserve the refresh span
-  const refresh = tabs.querySelector('.refresh');
-  tabs.innerHTML = '';
-  workspaces.forEach(w => {
-    const b = document.createElement('button');
-    b.className = 'tab' + (w.id === active ? ' active' : '');
-    b.textContent = w.id;
-    b.onclick = () => { state.ws = w.id; fetchSnapshot(); };
-    tabs.appendChild(b);
-  });
-  if (refresh) tabs.appendChild(refresh);
+function escapeHtml(s) {
+  return (s ?? '').toString()
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
-
-// ---------- KPIs -------------------------------------------------------------
-function renderKpis(t) {
-  const items = [
-    ['Sessions', t.sessions, '', null],
-    ['Peers', t.peers, '', null],
-    ['Messages', t.messages, '', null],
-    ['Conclusions', t.conclusions_total, 'extracted facts', t.conclusions_total > 0 ? 'accent' : null],
-    ['Dream WUs', `${t.wu_done}/${t.wu_total}`,
-      `${t.wu_pending} pending`, t.wu_total > 0 ? 'blue' : null],
-    ['In Progress', t.wu_progress, t.wu_progress ? 'deriver active' : 'idle',
-      t.wu_progress > 0 ? 'warn' : ''],
-  ];
-  $('kpis').innerHTML = items.map(([l, v, sub, cls]) => `
-    <div class="kpi ${cls || ''}">
-      <div class="label">${l}</div>
-      <div class="val">${v}</div>
-      <div class="sub">${sub ?? ''}</div>
-    </div>`).join('');
+function initials(s) {
+  if (!s) return '?';
+  const parts = s.replace(/^user-default-/, '').split(/[-_]/);
+  return (parts[0]?.[0] || '?').toUpperCase() + (parts[1]?.[0] || '').toUpperCase();
 }
-
-// ---------- memory state (cost surrogates) ----------------------------------
-function renderMemoryState(ms) {
-  const el = $('memory-state');
-  if (!ms) { el.innerHTML = '<div class="empty">no data</div>'; return; }
-  const rows = [
-    ['message text',            ms.message_chars,         ms.message_chars],
-    ['short summaries',         ms.short_summary_chars,   ms.short_summary_chars],
-    ['long summaries',          ms.long_summary_chars,    ms.long_summary_chars],
-    ['peer cards',              ms.peer_card_chars,       ms.peer_card_chars],
-    ['conclusions',             ms.conclusion_chars,      ms.conclusion_chars],
-  ];
-  const rowsHtml = rows.map(([k, ch, _]) => `
-    <div class="stat-row"><span class="k">${k}</span>
-      <span class="v">${formatNum(ch)} chars</span></div>`).join('');
-  el.innerHTML = `
-    ${rowsHtml}
-    <div class="stat-row" style="margin-top:6px;border-top:1px solid var(--line);padding-top:8px">
-      <span class="k" style="color:var(--accent)">approx tokens (4 chars/token)</span>
-      <span class="v" style="color:var(--accent)">~${formatNum(ms.approx_tokens_surrogate)}</span></div>
-    <div style="font-size:10px;color:var(--ink-dim);margin-top:8px;line-height:1.4">
-      ⚠ Honcho's API does not expose token counts. This is a surrogate:
-      chars ÷ 4. To get real token/cost data, instrument the LLM provider
-      directly or scrape deriver logs.
-    </div>`;
-}
-
-// ---------- proxy usage -----------------------------------------------------
-function renderUsage(u) {
-  const el = $('usage');
-  if (!u) { el.innerHTML = '<div class="empty">no data</div>'; return; }
-  const rows = [
-    [`calls (${u.window_seconds}s window)`, formatNum(u.calls_in_window)],
-    ['calls/sec avg',  u.calls_per_sec_avg.toFixed(3)],
-    ['total recorded', formatNum(u.total_calls_recorded)],
-    ['snapshots served', formatNum(u.snapshots)],
-  ];
-  const baseRows = rows.map(([k, v]) =>
-    `<div class="stat-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
-  const top = (u.endpoints || []).slice(0, 6);
-  const endpointRows = top.map(e => {
-    const errCls = e.errors > 0 ? 'style="color:var(--bad)"' : '';
-    return `<div class="stat-row" style="display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center">
-      <span class="k" style="font-family:inherit">${escapeHtml(e.endpoint)}</span>
-      <span class="v">${e.calls}×</span>
-      <span class="v" style="color:var(--accent-2)">${e.avg_lat_ms}ms</span>
-      <span class="v" ${errCls}>${e.errors}✗</span>
-    </div>`;
-  }).join('');
-  el.innerHTML = `
-    ${baseRows}
-    <div style="font-size:10px;color:var(--ink-dim);margin-top:8px;letter-spacing:0.15em;text-transform:uppercase">top endpoints</div>
-    ${endpointRows || '<div class="empty">none in window</div>'}
-    <div style="font-size:10px;color:var(--ink-dim);margin-top:8px;line-height:1.4">
-      These are calls YOUR proxy (this dashboard) makes to Honcho.
-      Honcho itself does not surface its own internal LLM call volume.
-    </div>`;
-}
-
 function formatNum(n) {
   if (n === null || n === undefined) return '—';
   return Number(n).toLocaleString();
 }
+function relativeTime(ts) {
+  if (!ts) return '—';
+  let d;
+  if (ts.length > 20 && ts.includes('-')) {
+    d = new Date(ts).getTime();
+  } else {
+    // ULID: extract timestamp portion (first 10 base32 chars = first 48 bits)
+    // Best-effort: try to derive a unix-ms from ULID.
+    try {
+      const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+      let ms = 0;
+      for (let i = 0; i < 10; i++) {
+        const c = ts[i];
+        const v = CROCKFORD.indexOf(c);
+        if (v < 0) { d = null; break; }
+        ms = ms * 32 + v;
+      }
+      d = ms || null;
+    } catch (_) { d = null; }
+  }
+  if (!d || isNaN(d)) return ts.slice(0, 8) + '…';
+  const diff = Date.now() - d;
+  const abs = Math.abs(diff);
+  const future = diff < 0;
+  if (abs < 60_000) return future ? 'in moments' : 'just now';
+  const m = Math.round(abs / 60_000);
+  if (m < 60) return future ? `in ${m}m` : `${m}m ago`;
+  const h = Math.round(abs / 3_600_000);
+  if (h < 24) return future ? `in ${h}h` : `${h}h ago`;
+  const days = Math.round(abs / 86_400_000);
+  if (days < 30) return future ? `in ${days}d` : `${days}d ago`;
+  return new Date(d).toLocaleDateString();
+}
+function freshness(ts) {
+  if (!ts) return 'cold';
+  let d;
+  if (ts.length > 20 && ts.includes('-')) d = new Date(ts).getTime();
+  else { try { /* same ULID math */ d = null; } catch (_) { d = null; } }
+  if (!d || isNaN(d)) return 'cold';
+  const ageMs = Date.now() - d;
+  const hours = ageMs / 3_600_000;
+  if (hours < 1) return 'fresh';
+  if (hours < 24 * 3) return 'stale';
+  return 'cold';
+}
 
-// ---------- deriver card -----------------------------------------------------
+// ---------- log -------------------------------------------------------------
+function log(msg, level = '') {
+  const box = $('log');
+  const row = document.createElement('div');
+  row.className = 'log-row ' + level;
+  const ts = new Date().toLocaleTimeString();
+  row.innerHTML = `<span class="ts">${ts}</span>${msg}`;
+  box.prepend(row);
+  while (box.children.length > 80) box.removeChild(box.lastChild);
+}
+
+// ---------- workspaces ------------------------------------------------------
+function renderToolbar(workspaces, active) {
+  const tb = $('toolbar');
+  tb.innerHTML = '';
+  workspaces.forEach(w => {
+    const b = document.createElement('button');
+    b.className = 'pill' + (w.id === active ? ' is-active' : '');
+    b.textContent = w.id;
+    b.setAttribute('aria-pressed', w.id === active ? 'true' : 'false');
+    b.onclick = () => { state.ws = w.id; fetchSnapshot(); };
+    tb.appendChild(b);
+  });
+}
+
+// ---------- advisors (banners) ----------------------------------------------
+function renderAdvisors(advisors) {
+  const host = $('advisors');
+  if (!advisors || !advisors.length) { host.innerHTML = ''; return; }
+  host.innerHTML = advisors.map(a => `
+    <div class="advisor ${a.level}">
+      <div class="advisor-title">${escapeHtml(a.title)}</div>
+      <div class="advisor-body">${escapeHtml(a.body)}</div>
+    </div>
+  `).join('');
+}
+
+// ---------- KPIs ------------------------------------------------------------
+function renderKpis(t) {
+  const items = [
+    ['Sessions',   t.sessions,         'conversations',           null],
+    ['Peers',      t.peers,            'participants',            null],
+    ['Messages',   t.messages,         'across sessions',         null],
+    ['Conclusions', t.conclusions_total, 'extracted facts',
+                              t.conclusions_total > 0 ? 'accent' : null],
+    ['Dream work units', `${t.wu_done}/${t.wu_total}`, t.wu_pending ? `${t.wu_pending} pending` : 'all done',
+                              t.wu_total > 0 ? 'accent' : null],
+    ['Deriver in progress', t.wu_progress, t.wu_progress ? 'deriver active' : 'idle',
+                              t.wu_progress > 0 ? 'warn' : null],
+  ];
+  $('kpis').innerHTML = items.map(([l, v, sub, cls]) => `
+    <div class="kpi ${cls || ''}">
+      <div class="kpi-label">${escapeHtml(l)}
+        <span class="hint" tabindex="0"
+              data-tip="${escapeHtml(KPI_HINTS[l] || '')}">i</span>
+      </div>
+      <div class="kpi-value num">${v}</div>
+      <div class="kpi-sub">${escapeHtml(sub || '')}</div>
+    </div>`).join('');
+}
+
+const KPI_HINTS = {
+  'Sessions': 'A session is a single conversation thread between two peers. Each user/agent pair gets its own session automatically.',
+  'Peers': 'A peer is one participant in any conversation — you, the assistant, or an external user.',
+  'Messages': 'Total messages stored across all sessions in this workspace.',
+  'Conclusions': 'Atomic facts the deriver has extracted (e.g. "user prefers Python"). These are the units of memory Honcho retrieves later.',
+  'Dream work units': 'Background tasks the deriver has scheduled and finished. Each work unit represents one batch of analysis or consolidation.',
+  'Deriver in progress': 'Work units currently being processed by the deriver worker. A nonzero number means the worker is actively thinking.'
+};
+
+// ---------- deriver panel ---------------------------------------------------
 function renderDeriver(q) {
   const total = q.total_work_units || 0;
   const done = q.completed_work_units || 0;
   const pending = q.pending_work_units || 0;
   const inprog = q.in_progress_work_units || 0;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
   $('deriver-bar').style.width = pct + '%';
   $('deriver-progress-label').textContent =
-    total === 0 ? 'no work units yet' : `${done} / ${total} work units completed (${pct}%)`;
-  $('deriver-pending-label').textContent = `${pending} pending · ${inprog} in progress`;
+    total === 0 ? 'No work scheduled yet — trigger one to start.'
+                : `${done} of ${total} work units completed · ${pct}%`;
+  $('deriver-pending').textContent = `${pending} pending · ${inprog} in progress`;
+  $('deriver-total').textContent = total > 0 ? `${total} total` : 'awaiting input';
 
-  const status = $('deriver-status');
+  const pill = $('deriver-summary-pill');
   const busy = pending > 0 || inprog > 0;
-  status.className = 'deriver-status ' + (busy ? 'busy' : 'idle');
-  $('deriver-label').textContent = busy
-    ? `processing (${inprog} active, ${pending} queued)`
-    : total > 0 ? 'completed' : 'idle — awaiting input';
+  pill.innerHTML = `<span class="deriver-status-pill ${busy ? 'busy' : 'idle'}">
+                      <span class="pulse ${busy ? 'live' : ''}"></span>
+                      ${busy ? 'processing' : (total > 0 ? 'complete' : 'idle')}
+                    </span>`;
 }
 
-// ---------- sessions ---------------------------------------------------------
-function renderSessions(sessions) {
-  const el = $('sessions');
-  if (!sessions.length) { el.innerHTML = '<div class="empty">no sessions</div>'; return; }
-  el.innerHTML = sessions.map(s => {
+// ---------- sessions --------------------------------------------------------
+function renderSessions(sessions, advisors) {
+  const host = $('sessions');
+  $('sessions-count').textContent = sessions.length;
+
+  if (!sessions.length) {
+    host.innerHTML = '<div class="empty-state">No sessions yet. Start a conversation with the agent to create one.</div>';
+    return;
+  }
+
+  // Aggregate empty-state hint at top when none of the sessions have summaries yet
+  const noSummaries = sessions.every(s => !s.short_summary && !s.long_summary);
+
+  host.innerHTML = sessions.map(s => {
+    const f = freshness(s.last_ts);
+    const badgeClass = `badge ${f}`;
     const summary = s.short_summary
-      ? `<div class="summary">${escapeHtml(s.short_summary)}</div>`
-      : `<div class="summary" style="color:var(--ink-dim);font-style:italic">no summary yet — deriver will fold messages at the 1024-token batch gate</div>`;
-    return `<div class="session">
-      <div class="h">
-        <span class="id">${escapeHtml(s.id)}</span>
-        <span class="badge ${s.is_active ? 'on' : 'off'}">${s.is_active ? 'active' : 'closed'}</span>
+      ? `<div class="row-body">${escapeHtml(s.short_summary)}</div>`
+      : `<div class="row-body empty">No summary yet — the deriver needs more messages, or it's blocked upstream (see banner).</div>`;
+    return `<div class="row">
+      <div class="row-head">
+        <div class="row-id">${escapeHtml(s.id)}</div>
+        <span class="${badgeClass}">${relativeTime(s.last_ts)}</span>
       </div>
-      <div class="meta">
-        <span>💬 ${s.message_count} msgs</span>
-        <span>📝 ${formatNum(s.message_chars)}c</span>
-        <span>🤖 last: ${escapeHtml(s.last_peer || '—')}</span>
-        <span>🕒 ${formatTs(s.last_ts)}</span>
+      <div class="row-meta">
+        <span><span class="num">${formatNum(s.message_count)}</span> msgs</span>
+        <span><span class="num">${formatNum(s.message_chars)}</span> chars</span>
+        <span>last by <span class="mono" style="color:var(--ink-2)">${escapeHtml(s.last_peer || '—')}</span></span>
       </div>
       ${summary}
-      ${s.last_message ? `<div class="lastmsg">last: ${escapeHtml(s.last_message)}</div>` : ''}
     </div>`;
   }).join('');
 }
 
-// ---------- peers ------------------------------------------------------------
+// ---------- peers -----------------------------------------------------------
 function renderPeers(peers) {
-  const el = $('peers');
-  if (!peers.length) { el.innerHTML = '<div class="empty">no peers</div>'; return; }
-  el.innerHTML = peers.map(p => `
-    <div class="peer">
-      <div class="h">
-        <span class="id">${escapeHtml(p.id)}</span>
-        <span class="badge ${p.has_card ? 'on' : 'off'}">${p.has_card ? 'card' : 'no card'}</span>
+  const host = $('peers');
+  $('peers-count').textContent = peers.length;
+
+  if (!peers.length) {
+    host.innerHTML = '<div class="empty-state">No peers yet.</div>';
+    return;
+  }
+  host.innerHTML = peers.map(p => `
+    <div class="row">
+      <div class="row-head">
+        <div class="peer-card-head">
+          <span class="chip">${initials(p.id)}</span>
+          <span class="row-id muted">${escapeHtml(p.id)}</span>
+        </div>
+        <span class="badge ${p.has_card ? 'has' : 'cold'}">
+          ${p.has_card ? `${formatNum(p.card_size)} chars` : 'no card'}
+        </span>
       </div>
-      <div class="meta" style="color:var(--ink-dim);font-size:11px;display:flex;gap:12px">
-        <span>📇 ${p.card_size}b card</span>
-        <span>💡 ${p.conclusions} conclusions</span>
+      <div class="row-meta">
+        <span><span class="num">${formatNum(p.conclusions)}</span> conclusions</span>
       </div>
+      ${p.has_card
+        ? `<div class="row-body">Peer card exists. ${formatNum(p.card_size)} chars of distilled context are attached to this peer.</div>`
+        : `<div class="row-body empty">No peer card yet — will appear after the deriver writes one.</div>`}
     </div>
   `).join('');
 }
 
-// ---------- feed -------------------------------------------------------------
+// ---------- recent messages (feed) ------------------------------------------
 function renderFeed(feed) {
-  const el = $('feed');
-  if (!feed.length) { el.innerHTML = '<div class="empty">nothing yet</div>'; return; }
-  el.innerHTML = feed.map(f => `
-    <div class="feed-row">
-      <div class="top">
-        <span><span class="peer">${escapeHtml(f.peer || '?')}</span> · ${escapeHtml(f.session)}</span>
-        <span>${formatTs(f.ts)}</span>
+  const host = $('feed');
+  if (!feed.length) {
+    host.innerHTML = '<div class="empty-state">No messages yet.</div>';
+    return;
+  }
+  host.innerHTML = feed.map(f => {
+    const fClass = freshness(f.ts);
+    return `<div class="row">
+      <div class="row-head">
+        <div class="peer-card-head">
+          <span class="chip">${initials(f.peer)}</span>
+          <span class="row-id muted">${escapeHtml(f.peer || '?')}</span>
+          <span style="color:var(--ink-4);font-size:12px">in</span>
+          <span class="mono" style="font-size:12px;color:var(--ink-2)">${escapeHtml(f.session)}</span>
+        </div>
+        <span class="badge ${fClass}">${relativeTime(f.ts)}</span>
       </div>
-      <div class="msg">${escapeHtml(f.preview)}</div>
-    </div>
-  `).join('');
+      <div class="row-body">${escapeHtml(f.preview)}</div>
+    </div>`;
+  }).join('');
 }
 
-// ---------- totals -----------------------------------------------------------
+// ---------- memory state ----------------------------------------------------
+function renderMemoryState(ms) {
+  const host = $('memory-state');
+  if (!ms) { host.innerHTML = '<div class="empty-state">No data</div>'; return; }
+
+  // If everything is zero, show a meaningful empty state
+  const allZero = !ms.message_chars && !ms.short_summary_chars &&
+                  !ms.long_summary_chars && !ms.peer_card_chars && !ms.conclusion_chars;
+  if (allZero) {
+    host.innerHTML = `<div class="empty-state">
+        The memory state is empty.<br>
+        <em>This workspace has no message, summary, card, or conclusion content yet.</em>
+      </div>`;
+    $('memory-total').textContent = '~0 tokens';
+    return;
+  }
+
+  const rows = [
+    ['Messages (raw)',         ms.message_chars],
+    ['Short summaries',        ms.short_summary_chars],
+    ['Long summaries',         ms.long_summary_chars],
+    ['Peer cards',             ms.peer_card_chars],
+    ['Conclusions',            ms.conclusion_chars],
+  ].filter(([_, v]) => v > 0);
+
+  host.innerHTML = `
+    ${rows.map(([k, v]) => `<div class="stat">
+        <span class="k">${k}</span>
+        <span class="v num">${formatNum(v)} chars</span></div>`).join('')}
+    <div class="stat highlight">
+      <span class="k">Approximate total</span>
+      <span class="v num">~${formatNum(ms.approx_tokens_surrogate)} tokens</span>
+    </div>
+    <div class="footnote">
+      <em>Surrogate, not exact.</em> Honcho's API has no token field;
+      this is character count ÷ 4, a rough English-text rule of thumb.
+      For real numbers, instrument your LLM provider or scrape the deriver container logs.
+    </div>
+  `;
+  $('memory-total').textContent = `~${formatNum(ms.approx_tokens_surrogate)} tokens`;
+}
+
+// ---------- proxy usage -----------------------------------------------------
+function renderUsage(u) {
+  const host = $('usage');
+  if (!u) { host.innerHTML = '<div class="empty-state">No data yet — refresh once more.</div>'; return; }
+
+  const baseRows = [
+    [`Calls in last ${u.window_seconds}s`, formatNum(u.calls_in_window)],
+    ['Calls/sec (rolling avg)', u.calls_per_sec_avg.toFixed(3)],
+    ['Total recorded',          formatNum(u.total_calls_recorded)],
+    ['Dashboard polls served',  formatNum(u.snapshots)],
+  ];
+  const top = (u.endpoints || []).slice(0, 6);
+  const epRows = top.map(e => `
+    <div class="ep-row">
+      <span class="ep-path">${escapeHtml(e.endpoint)}</span>
+      <span class="v num">${e.calls}×</span>
+      <span class="v lat num">${e.avg_lat_ms}ms</span>
+      <span class="v err num">${e.errors}✗</span>
+    </div>`).join('');
+
+  host.innerHTML = `
+    ${baseRows.map(([k, v]) => `<div class="stat">
+        <span class="k">${k}</span>
+        <span class="v num">${v}</span></div>`).join('')}
+    ${epRows ? `<div style="margin:14px 0 6px;font-size:11px;text-transform:uppercase;
+                  letter-spacing:0.05em;color:var(--ink-3);font-weight:600">Top endpoints</div>
+               ${epRows}` : ''}
+    <div class="footnote">
+      <em>Why 0 tokens?</em> Honcho does not expose its own LLM call volume.
+      These counts measure the dashboard's outbound API traffic to Honcho,
+      which is a proxy for polling cost — useful for spotting regressions,
+      not a measure of deriver work.
+    </div>`;
+}
+
+// ---------- workspace totals -------------------------------------------------
 function renderTotals(totals, queue) {
   const rows = [
-    ['Work units (total / done)', `${totals.wu_total} / ${totals.wu_done}`],
-    ['Work units (in progress)', totals.wu_progress],
-    ['Work units (pending)', totals.wu_pending],
-    ['Sessions', totals.sessions],
-    ['Peers', totals.peers],
-    ['Messages (across all sessions)', totals.messages],
-    ['Queue poll ts', new Date().toLocaleTimeString()],
+    ['Work units (done / total)', `${totals.wu_done} / ${totals.wu_total}`],
+    ['Work units (in progress)',   totals.wu_progress],
+    ['Work units (pending)',       totals.wu_pending],
+    ['Sessions',                   totals.sessions],
+    ['Peers',                      totals.peers],
+    ['Messages',                   totals.messages],
+    ['Conclusions',                totals.conclusions_total],
   ];
-  $('totals').innerHTML = rows.map(([k, v]) =>
-    `<div class="stat-row"><span class="k">${k}</span><span class="v">${v}</span></div>`
-  ).join('');
+  $('totals').innerHTML = rows.map(([k, v]) => `
+    <div class="stat"><span class="k">${k}</span><span class="v num">${v}</span></div>
+  `).join('');
 }
 
-// ---------- chart ------------------------------------------------------------
+// ---------- chart -----------------------------------------------------------
 let chart;
 function initChart() {
   const ctx = $('msgChart').getContext('2d');
   const grad = ctx.createLinearGradient(0, 0, 0, 220);
-  grad.addColorStop(0, 'rgba(78,224,193,0.6)');
-  grad.addColorStop(1, 'rgba(78,224,193,0.0)');
+  grad.addColorStop(0, 'rgba(13,138,115,0.18)');
+  grad.addColorStop(1, 'rgba(13,138,115,0.0)');
   chart = new Chart(ctx, {
     type: 'line',
     data: {
       labels: Array.from({length: HISTORY_POINTS}, (_, i) => i),
-      datasets: [{
-        label: 'message total',
-        data: Array(HISTORY_POINTS).fill(0),
-        borderColor: '#4ee0c1',
-        backgroundColor: grad,
-        borderWidth: 2,
-        tension: 0.3,
-        pointRadius: 0,
-        fill: true,
-      }, {
-        label: 'Δ per tick',
-        data: Array(HISTORY_POINTS).fill(0),
-        borderColor: '#6aa6ff',
-        borderWidth: 1.5,
-        tension: 0.2,
-        pointRadius: 0,
-        yAxisID: 'y1',
-        fill: false,
-      }],
+      datasets: [
+        {
+          label: 'total',
+          data: Array(HISTORY_POINTS).fill(0),
+          borderColor: '#0d8a73',
+          backgroundColor: grad,
+          borderWidth: 2,
+          tension: 0.3,
+          pointRadius: 0,
+          fill: true,
+        },
+        {
+          label: 'delta',
+          data: Array(HISTORY_POINTS).fill(0),
+          borderColor: '#aab3bf',
+          borderWidth: 1,
+          borderDash: [3, 3],
+          tension: 0.2,
+          pointRadius: 0,
+          fill: false,
+          yAxisID: 'y1',
+        },
+      ],
     },
     options: {
       animation: { duration: 250 },
@@ -518,15 +1152,17 @@ function initChart() {
       plugins: {
         legend: { display: false },
         tooltip: { mode: 'index', intersect: false,
-                   backgroundColor: '#0c1118', borderColor: '#1f2a3a', borderWidth: 1,
-                   titleColor: '#6aa6ff', bodyColor: '#d8e1ec' },
+                   backgroundColor: 'rgba(20,30,50,0.95)',
+                   titleColor: '#fff', bodyColor: '#e6eaf2',
+                   borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1,
+                   padding: 10, cornerRadius: 6, displayColors: false },
       },
       scales: {
-        x: { display: false, grid: { color: '#1f2a3a' } },
-        y: { position: 'left', grid: { color: '#1f2a3a' }, ticks: { color: '#6b7a8d' },
-             beginAtZero: true },
-        y1: { position: 'right', grid: { display: false }, ticks: { color: '#6b7a8d' },
-             beginAtZero: true },
+        x: { display: false },
+        y: { position: 'left', grid: { color: 'rgba(0,0,0,0.05)' },
+             ticks: { color: '#7d8794', font: { size: 11 } }, beginAtZero: true },
+        y1: { position: 'right', grid: { display: false },
+              ticks: { color: '#aab3bf', font: { size: 11 } }, beginAtZero: true },
       },
     },
   });
@@ -541,73 +1177,54 @@ function pushChartPoint(total, delta) {
   chart.update('none');
 }
 
-// ---------- helpers ----------------------------------------------------------
-function escapeHtml(s) {
-  return (s ?? '').toString()
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-function formatTs(ts) {
-  if (!ts) return '—';
-  // Honcho ids are ULID-ish base62 strings; not parseable to time.
-  // created_at fields are ISO if present.
-  if (ts.length > 20 && ts.includes('-')) {
-    return new Date(ts).toLocaleTimeString();
-  }
-  return ts.slice(0, 8) + '…';
-}
-
-// ---------- main loop --------------------------------------------------------
+// ---------- main loop -------------------------------------------------------
 async function fetchSnapshot() {
   try {
     const url = `/api/snapshot${state.ws ? '?workspace=' + encodeURIComponent(state.ws) : ''}`;
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error('http ' + resp.status);
-    const data = await resp.json();
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) throw new Error('http ' + r.status);
+    const data = await r.json();
 
-    renderTabs(data.workspaces, data.active_workspace);
+    renderToolbar(data.workspaces, data.active_workspace);
     state.ws = data.active_workspace;
+    state.peers = data.peers;
+
+    renderAdvisors((data.diagnostics || {}).advisors);
     renderKpis(data.totals);
     renderDeriver(data.queue || {});
-    renderSessions(data.sessions);
+    renderSessions(data.sessions, data.diagnostics || {});
     renderPeers(data.peers);
     renderFeed(data.activity);
     renderTotals(data.totals, data.queue);
     renderMemoryState(data.memory_state || {});
     renderUsage(data.usage || {});
-    state.peers = data.peers;
 
-    // chart math
+    // chart
     const total = data.totals.messages;
     const prev = state.prevTotals;
     const delta = prev ? Math.max(0, total - prev.messages) : 0;
     pushChartPoint(total, delta);
-    $('msgs-now').textContent = total;
-    $('msgs-delta').textContent = '+' + delta;
-    $('msgs-total').textContent = total;
+    $('msgs-now').textContent = formatNum(total);
+    $('msgs-delta').textContent = '+' + formatNum(delta);
+    $('msgs-total').textContent = formatNum(total);
 
-    // detect new message ids (for log feed)
-    let newMsgs = 0;
-    data.sessions.forEach(s => {
-      // We only see the LAST message preview, so we can't diff deeply here.
-      // Use heuristic: if total grew, log it.
-    });
     if (delta > 0 && prev) {
-      log(`<b style="color:var(--accent)">+${delta}</b> new message${delta === 1 ? '' : 's'} · workspace <b>${data.active_workspace}</b>`);
+      log(`<b>+${delta}</b> new message${delta === 1 ? '' : 's'} in workspace <b>${data.active_workspace}</b>`);
     }
 
     state.prevTotals = data.totals;
-    $('refresh-ts').textContent = 'updated ' + new Date().toLocaleTimeString();
+    $('last-updated').textContent = 'updated ' + new Date().toLocaleTimeString();
+    $('polling-badge').textContent = `${(1000 / POLL_MS).toFixed(1)}Hz`;
   } catch (err) {
     log('fetch failed: ' + err.message, 'err');
   }
 }
 
+// ---------- dream action ----------------------------------------------------
 async function triggerDream() {
   const btn = $('dream-btn');
-  btn.classList.add('loading'); btn.disabled = true;
+  btn.disabled = true;
   try {
-    // pick an observer: prefer a real user peer over "hermes" itself
     const peers = (state.peers || []).map(p => p.id);
     const observer = peers.find(p => !/^hermes$/i.test(p)) || peers[0] || 'hermes';
     const body = { observer, dream_type: 'omni' };
@@ -615,32 +1232,25 @@ async function triggerDream() {
       { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
     let j = {};
     try { j = await r.json(); } catch (_) {}
-    // Proxy always responds 200 for network round-trip success.
-    // Field `ok` (or upstream 2xx status) tells us whether Honcho accepted the dream.
     const upstreamStatus = j.status;
     const accepted = (j.ok === true) || (typeof upstreamStatus === 'number' && upstreamStatus >= 200 && upstreamStatus < 300);
     if (accepted) {
-      // 204 = queued, no further detail. anything else 2xx + resp body = also queued.
-      const detail = upstreamStatus === 204
-        ? 'queued (Honcho 204 — no body)'
-        : `queued (Honcho ${upstreamStatus})`;
-      log(`<span style="color:var(--accent)">dream scheduled</span> · observer=<b style="color:var(--accent-2)">${observer}</b> · omni · ${detail}`, 'ok');
+      const detail = upstreamStatus === 204 ? 'queued (Honcho 204, no body)' : `queued (Honcho ${upstreamStatus})`;
+      log(`<b>dream scheduled</b> · observer=<b>${escapeHtml(observer)}</b> · omni · ${detail}`, 'ok');
     } else {
-      // downstream or upstream refused — surface the actual code
-      const what = typeof upstreamStatus === 'number'
-        ? `upstream rejected ${upstreamStatus}`
-        : `proxy error`;
+      const what = typeof upstreamStatus === 'number' ? `upstream rejected ${upstreamStatus}` : 'proxy error';
       const detail = typeof j.resp === 'string' ? j.resp : (j.resp ? JSON.stringify(j.resp) : '');
-      log(`<span style="color:var(--bad)">dream failed</span> · ${what}` + (detail ? ` · ${escapeHtml(detail.slice(0,200))}` : ''), 'err');
+      log(`<b>dream failed</b> · ${what}` + (detail ? ` · ${escapeHtml(detail.slice(0,200))}` : ''), 'err');
     }
   } catch (err) {
     log('dream error: ' + err.message, 'err');
   } finally {
-    btn.classList.remove('loading'); btn.disabled = false;
+    btn.disabled = false;
     setTimeout(fetchSnapshot, 800);
   }
 }
 
+// ---------- boot ------------------------------------------------------------
 initChart();
 $('dream-btn').onclick = triggerDream;
 $('refresh-btn').onclick = fetchSnapshot;
@@ -649,8 +1259,17 @@ $('usage-reset').onclick = async () => {
   fetchSnapshot();
 };
 fetchSnapshot();
-log('dashboard online · proxying http://127.0.0.1:8000', 'ok');
+log('dashboard online · proxying <b>http://127.0.0.1:8000</b>', 'ok');
 setInterval(fetchSnapshot, POLL_MS);
+
+// Tick freshness chips every 30s so "5m ago" becomes "6m ago" without a poll.
+setInterval(() => {
+  document.querySelectorAll('.badge.fresh, .badge.stale, .badge.cold').forEach(() => {
+    // We need to re-render to refresh relative times. Trigger a soft refresh.
+    const ts = state.prevTotals; if (!ts) return;
+  });
+  fetchSnapshot();
+}, 30_000);
 </script>
 </body>
 </html>
