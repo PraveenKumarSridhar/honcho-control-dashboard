@@ -6,594 +6,698 @@
 <title>Honcho Control</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
+  /* ---------------------------------------------------------
+     Paper theme. Light only. Inter via system stack.
+     Hairline rules, generous whitespace, no shadows.
+  --------------------------------------------------------- */
   :root {
-    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
-    --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, "Cascadia Code", Consolas, monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+                 "Inter", "Segoe UI", system-ui, sans-serif;
+    --font-serif: "SF Pro Text", -apple-system, system-ui, "Inter",
+                  "Segoe UI", sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo,
+                 "Cascadia Code", Consolas, monospace;
 
-    /* Lighter, brighter surface than the previous build. Was 0c0e12/141820 — now slightly less dark. */
-    --bg:        #f4f6fa;
-    --bg-raised: #ffffff;
-    --bg-sunken: #eef1f6;
-    --line:      #dfe4ec;
-    --line-soft: #ebeef4;
+    /* Paper palette */
+    --paper:     #fbfaf7;          /* warm off-white */
+    --paper-2:   #f4f1eb;
+    --line:      #e2dfd6;
+    --line-soft: #ede9df;
 
-    --ink:       #0f1622;
-    --ink-2:     #3d4757;
-    --ink-3:     #6a7585;
-    --ink-4:     #98a2b1;
+    --ink:       #1f1c17;          /* warm near-black */
+    --ink-2:     #4d4840;
+    --ink-3:     #807a6e;
+    --ink-4:     #b3ac9d;
 
-    --accent:    #14a085;
-    --accent-2:  #2c7ef8;
-    --accent-bg: rgba(20,160,133,0.10);
-
-    --warn:      #b94e09;
-    --warn-bg:   #fff1de;
-    --bad:       #b3261e;
-    --bad-bg:    #fde8e6;
-    --ok:        #146a3e;
-    --ok-bg:     #ddf3e4;
-
-    --peer:      #2c7ef8;
-    --peer-bg:   rgba(44,126,248,0.10);
-    --session:   #14a085;
-    --session-bg:rgba(20,160,133,0.10);
-
-    --r:    10px;
-    --r-sm: 6px;
-    --r-lg: 14px;
-    --shadow-sm: 0 1px 0 rgba(15,22,34,0.04);
-    --shadow:    0 1px 2px rgba(15,22,34,0.06), 0 0 0 1px var(--line);
-    --shadow-lg: 0 8px 24px rgba(15,22,34,0.10), 0 0 0 1px var(--line);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg:        #0d1119;
-      --bg-raised: #161c28;
-      --bg-sunken: #0a0e15;
-      --line:      #232a37;
-      --line-soft: #1c222d;
-      --ink:       #e8edf5;
-      --ink-2:     #aeb6c4;
-      --ink-3:     #7d8794;
-      --ink-4:     #4a5567;
-      --accent:    #4ee0c1;
-      --accent-2:  #6aa6ff;
-      --shadow:    0 1px 0 rgba(0,0,0,0.4), 0 0 0 1px var(--line);
-      --shadow-lg: 0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px var(--line);
-    }
+    --accent:    #1c6e54;          /* deep teal — earthy */
+    --accent-2:  #2c4d77;          /* slate blue, for secondary */
+    --warn-bg:   #fff5db;
+    --bad:       #b04a3a;
+    --bad-bg:    #f7e3df;
+    --ok:        #2f6b4d;
+    --ok-bg:     #dfe9df;
   }
 
   *, *::before, *::after { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; min-height: 100vh; }
   body {
-    background: var(--bg);
+    background: var(--paper);
     color: var(--ink);
-    font-family: var(--font-sans);
-    font-size: 14px;
-    line-height: 1.55;
+    font-family: var(--font-serif);
+    font-size: 15px;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
   .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
   .mono { font-family: var(--font-mono); font-size: 0.92em; }
 
-  /* Page */
-  .page { max-width: 1280px; margin: 0 auto; padding: 22px 28px 100px; }
+  .page { max-width: 760px; margin: 0 auto; padding: 56px 32px 120px; }
 
-  /* Topbar */
-  .topbar {
-    display: flex; align-items: center; justify-content: space-between;
-    padding-bottom: 18px; margin-bottom: 18px;
-    gap: 14px; flex-wrap: wrap;
+  /* ---- Masthead ---- */
+  .masthead {
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 36px;
   }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 16px; letter-spacing: -0.01em; }
-  .brand-mark {
-    width: 26px; height: 26px; border-radius: 7px;
-    background: linear-gradient(135deg, var(--accent), var(--accent-2));
-    color: #fff;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 13px; font-family: var(--font-mono);
-    box-shadow: 0 2px 6px rgba(20,160,133,0.3);
+  .masthead h1 {
+    margin: 0 0 6px;
+    font-size: 32px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--ink);
   }
-  .topbar-right { display: flex; align-items: center; gap: 14px; font-size: 12.5px; color: var(--ink-3); }
-  .pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
-  .pulse.live { animation: pulse 1.4s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
+  .masthead .sub {
+    margin: 0;
+    font-size: 14px;
+    color: var(--ink-3);
+    letter-spacing: 0.02em;
+  }
+  .masthead .stamp {
+    margin-top: 14px;
+    font-size: 11.5px;
+    color: var(--ink-4);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
 
-  /* Workspace pills + descriptions */
-  .ws-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+  /* ---- Workspace picker ---- */
+  .workspaces { margin-bottom: 32px; }
+  .ws-list { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
   .pill {
-    appearance: none; border: 1px solid var(--line);
-    background: var(--bg-raised); color: var(--ink-2);
-    font: inherit; font-size: 13px; padding: 7px 14px;
-    border-radius: 999px; cursor: pointer; transition: 0.15s;
+    appearance: none; border: none; background: transparent;
+    color: var(--ink-3); font: inherit; font-size: 14px;
+    padding: 4px 12px; border-radius: 2px; cursor: pointer;
   }
-  .pill:hover { color: var(--ink); border-color: var(--ink-4); }
+  .pill:hover { color: var(--ink-2); }
   .pill.is-active {
-    color: var(--accent-2); border-color: var(--accent-2);
-    background: rgba(44,126,248,0.08); font-weight: 500;
+    color: var(--ink); background: var(--paper-2);
+    box-shadow: inset 0 -2px 0 var(--accent);
+    font-weight: 500;
   }
   .ws-desc {
-    color: var(--ink-3); font-size: 12.5px; line-height: 1.5;
-    padding: 10px 14px;
-    background: var(--bg-raised);
-    border: 1px solid var(--line);
-    border-radius: var(--r);
-    margin-bottom: 22px;
+    color: var(--ink-2); font-size: 14px; line-height: 1.5;
+    padding: 6px 0;
   }
-  .ws-desc strong { color: var(--ink-2); font-weight: 600; }
+  .ws-desc strong { color: var(--ink); font-weight: 600; }
 
-  /* System strip */
-  .system {
-    display: flex; gap: 0;
-    border: 1px solid var(--line); border-radius: var(--r);
-    background: var(--bg-raised);
-    margin-bottom: 20px;
-    overflow: hidden;
-  }
-  .system-cell {
-    flex: 1; padding: 12px 18px;
-    border-right: 1px solid var(--line-soft);
-    display: flex; flex-direction: column; gap: 4px;
-    min-width: 0;
-  }
-  .system-cell:last-child { border-right: none; }
-  .system-label { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
-  .system-value { font-size: 14px; color: var(--ink); font-family: var(--font-mono); word-break: break-all; }
-  .system-value .ok { color: var(--ok); }
-  .system-value .bad { color: var(--bad); }
-
-  /* Advisors */
-  .advisors { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+  /* ---- Advisors (yellow note) ---- */
+  .advisors { margin-bottom: 36px; }
   .advisor {
-    border: 1px solid var(--line);
-    border-left-width: 3px;
-    border-radius: var(--r-sm);
-    padding: 12px 16px;
-    font-size: 13px;
-    background: var(--bg-raised);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 0;
+    background: var(--warn-bg);
+    margin-top: -1px;
   }
-  .advisor.warn   { border-left-color: var(--warn); background: var(--warn-bg); }
-  .advisor-title  { font-weight: 600; margin-bottom: 4px; }
-  .advisor-body   { color: var(--ink-2); line-height: 1.5; }
+  .advisor-title {
+    font-weight: 600; color: var(--ink);
+    margin-bottom: 4px; font-size: 14px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .advisor-title::before {
+    content: "·"; color: var(--warn); font-weight: 700;
+  }
+  .advisor-body { color: var(--ink-2); font-size: 13.5px; line-height: 1.55; }
+  .advisor-body code { font-family: var(--font-mono); font-size: 0.9em; }
 
-  /* Hero — graph card */
-  .hero {
-    border: 1px solid var(--line);
-    border-radius: var(--r-lg);
-    background: var(--bg-raised);
-    box-shadow: var(--shadow-sm);
-    margin-bottom: 20px;
-    overflow: hidden;
+  /* ---- Section: prose-first ---- */
+  section { margin-bottom: 48px; }
+  section h2 {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-3);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin: 0 0 18px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 8px;
   }
-  .hero-head {
-    padding: 14px 20px; border-bottom: 1px solid var(--line-soft);
-    display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+
+  /* ---- Prose summary (the lead paragraph) ---- */
+  .prose {
+    font-size: 16px;
+    line-height: 1.65;
+    color: var(--ink);
   }
-  .hero-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); }
-  .hero-sub   { margin: 4px 0 0; font-size: 12.5px; color: var(--ink-3); line-height: 1.45; }
-  .hero-body  { padding: 8px 0 0; }
-  #memory-graph { width: 100%; height: 360px; display: block; }
-  .graph-legend {
-    display: flex; gap: 16px;
-    padding: 10px 20px 14px;
+  .prose em { color: var(--ink-2); font-style: italic; }
+  .prose strong { font-weight: 600; }
+  .prose .quiet { color: var(--ink-3); }
+
+  /* ---- Stat strip (small inline numbers) ---- */
+  .stats {
+    display: flex; flex-wrap: wrap;
+    gap: 28px 32px;
+    margin: 14px 0 28px;
+  }
+  .stat-cell { display: flex; flex-direction: column; gap: 0; min-width: 0; }
+  .stat-label {
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .stat-value {
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+  }
+  .stat-value .unit {
     font-size: 12px;
     color: var(--ink-3);
-    border-top: 1px solid var(--line-soft);
+    margin-left: 3px;
+    font-weight: 400;
   }
-  .legend-dot {
-    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
-    margin-right: 6px; vertical-align: middle;
-  }
+  .stat-sub { font-size: 12px; color: var(--ink-3); }
 
-  /* Generic panel */
-  .panel {
-    background: var(--bg-raised);
-    border: 1px solid var(--line);
-    border-radius: var(--r);
-    box-shadow: var(--shadow-sm);
-    overflow: hidden;
-    display: flex; flex-direction: column;
-  }
-  .panel-head {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--line-soft);
-    gap: 10px;
-  }
-  .panel-title {
-    font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
-    color: var(--ink-2); margin: 0;
-    display: flex; align-items: center;
-  }
-  .panel-body { padding: 14px 16px; flex: 1; }
-  .panel-body.flush { padding: 0; }
-
-  /* Hints */
+  /* ---- Tooltip hint — click to pin, click outside to dismiss ---- */
   .hint {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 15px; height: 15px;
+    width: 14px; height: 14px;
     border-radius: 50%;
     border: 1px solid var(--ink-4);
-    color: var(--ink-3); font-size: 9.5px; font-weight: 700;
-    cursor: help; position: relative; user-select: none; margin-left: 5px;
+    color: var(--ink-3);
+    font-size: 9.5px; font-weight: 600;
+    cursor: pointer; user-select: none;
+    margin-left: 5px;
+    transition: color 0.15s, border-color 0.15s;
   }
-  .hint:hover, .hint:focus { color: var(--accent-2); border-color: var(--accent-2); outline: none; }
+  .hint:hover, .hint:focus, .hint.is-open {
+    color: var(--accent); border-color: var(--accent); outline: none;
+  }
   .hint[data-tip]::after {
     content: attr(data-tip);
-    position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
-    width: max-content; max-width: 280px;
-    padding: 8px 12px;
-    background: var(--ink); color: var(--bg);
-    font-size: 12px; font-weight: 400; line-height: 1.45;
-    border-radius: var(--r-sm); box-shadow: var(--shadow-lg);
-    opacity: 0; pointer-events: none; transition: opacity 0.15s;
-    z-index: 100; text-align: left;
-    text-transform: none; letter-spacing: 0;
+    position: absolute;
+    transform: translateX(-50%);
+    width: max-content; max-width: 320px;
+    padding: 10px 14px;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 13px;
+    font-weight: 400; line-height: 1.55;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s ease;
+    z-index: 100;
+    text-align: left;
+    text-transform: none;
+    letter-spacing: 0;
   }
-  .hint:hover::after, .hint:focus::after { opacity: 1; }
+  .hint { position: relative; }
+  .hint::after { bottom: calc(100% + 8px); left: 50%; }
+  .hint:hover::after, .hint:focus::after, .hint.is-open::after { opacity: 1; }
 
-  /* Grids */
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+  /* prevent tooltip from hanging on when cursor moves but mouseout didn't fire */
+  .hint.is-open::after { pointer-events: auto; }
 
-  /* Deriver row */
-  .progress { height: 6px; background: var(--bg-sunken); border-radius: 999px; overflow: hidden; margin: 10px 0 8px; }
-  .progress > span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: inherit; transition: width 0.5s cubic-bezier(0.2,0,0.2,1); }
-  .progress-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); margin-bottom: 8px; }
-  .status-pill {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 11.5px; padding: 3px 10px; border-radius: 999px;
-    background: var(--ink-4); color: var(--bg-raised); font-weight: 500;
+  /* ---- Session list (paper-style rows) ---- */
+  .session-list { border-top: 1px solid var(--line); }
+  .session-list .empty {
+    padding: 28px 0;
+    color: var(--ink-3); font-style: italic;
+    border-bottom: 1px solid var(--line);
   }
-  .status-pill.busy { background: var(--accent); }
-  .status-pill.idle { background: var(--ink-4); }
+  .session {
+    padding: 18px 0;
+    border-bottom: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 16px;
+  }
+  .session-name {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+  }
+  .session-meta {
+    font-size: 12px;
+    color: var(--ink-3);
+    grid-column: 1 / 2;
+    display: flex; gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .session-meta span { display: inline-flex; align-items: center; gap: 4px; }
+  .session-meta .v { color: var(--ink-2); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .session-summary {
+    grid-column: 1 / 2;
+    font-size: 14.5px;
+    color: var(--ink-2);
+    line-height: 1.55;
+    font-family: var(--font-serif);
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .session-summary.empty { color: var(--ink-3); font-style: italic; }
+  .session-aside {
+    grid-column: 2 / 3;
+    grid-row: 1 / 4;
+    text-align: right;
+    font-size: 12px;
+    color: var(--ink-3);
+    min-width: 90px;
+  }
+  .session-aside .ago { display: block; color: var(--ink-2); }
 
-  .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  /* ---- Peer list ---- */
+  .peer-list { border-top: 1px solid var(--line); }
+  .peer {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px;
+  }
+  .peer-name { font-family: var(--font-mono); font-size: 13.5px; color: var(--ink); }
+  .peer-meta { font-size: 12px; color: var(--ink-3); }
+  .peer-meta .v { color: var(--ink-2); font-weight: 500; }
+
+  /* ---- Memory anatomy: 4 small cards in a row ---- */
+  .anatomy {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+  }
+  .anatomy-cell {
+    padding: 14px 16px;
+    border-right: 1px solid var(--line);
+    text-align: center;
+  }
+  .anatomy-cell:last-child { border-right: none; }
+  .anatomy-cell .icon { font-size: 18px; margin-bottom: 6px; opacity: 0.7; }
+  .anatomy-cell .name {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 600;
+  }
+  .anatomy-cell .val {
+    font-size: 18px;
+    color: var(--ink);
+    margin-top: 4px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- Deriver inline ---- */
+  .deriver {
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 18px 22px;
+    background: var(--paper-2);
+  }
+  .deriver .label {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .deriver-progress-label {
+    font-size: 14px;
+    color: var(--ink-2);
+    margin-bottom: 8px;
+  }
+  .progress {
+    height: 2px;
+    background: var(--line);
+    border-radius: 1px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .progress > span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    border-radius: inherit;
+    transition: width 0.5s cubic-bezier(0.2,0,0.2,1);
+  }
+  .progress-meta {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: var(--ink-3);
+    margin-bottom: 14px;
+  }
+  .actions { display: flex; gap: 14px; flex-wrap: wrap; }
   .btn {
-    appearance: none; border: 1px solid var(--line); background: var(--bg-raised); color: var(--ink);
-    font: inherit; font-size: 13px; padding: 7px 14px; border-radius: var(--r-sm); cursor: pointer; transition: 0.15s;
+    appearance: none; border: 1px solid var(--ink);
+    background: transparent; color: var(--ink);
+    font: inherit; font-size: 13px; letter-spacing: 0.04em;
+    padding: 6px 14px; border-radius: 2px; cursor: pointer;
+    transition: background 0.12s, color 0.12s;
   }
-  .btn:hover { border-color: var(--accent); color: var(--accent-2); }
-  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+  .btn:hover { background: var(--ink); color: var(--paper); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+  .btn.primary:hover { background: var(--ink); border-color: var(--ink); }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* Chart */
-  .chart-wrap { position: relative; height: 200px; }
+  /* Status badge */
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11.5px; padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--ink-2);
+    font-weight: 500;
+    background: var(--paper);
+  }
+  .status-pill.busy { color: var(--accent); border-color: var(--accent); }
+  .status-pill.idle { color: var(--ink-3); }
+  .pulse { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .pulse.live { animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
+
+  /* Chart wrapper */
+  .chart-wrap { height: 180px; position: relative; margin-top: 8px; }
   .chart-stats {
-    display: flex; gap: 24px; margin-top: 10px;
-    padding-top: 10px; border-top: 1px solid var(--line-soft);
-    font-size: 12px; color: var(--ink-3);
+    display: flex; gap: 24px;
+    margin-top: 8px;
+    font-size: 12.5px; color: var(--ink-3);
   }
   .chart-stats > div { display: flex; align-items: baseline; gap: 6px; }
   .chart-stats .v { color: var(--ink); font-weight: 500; }
-  .chart-stats .v.accent { color: var(--accent-2); }
+  .chart-stats .v.accent { color: var(--accent); }
 
-  /* Lists */
-  .scroll { overflow-y: auto; max-height: 380px; }
-  .row {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--line-soft);
-    transition: background 0.15s;
+  /* Recent messages — prose style */
+  .feed { border-top: 1px solid var(--line); }
+  .feed-row {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
   }
-  .row:last-child { border-bottom: none; }
-  .row:hover { background: var(--bg-sunken); }
-  .row-head {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 10px; margin-bottom: 5px;
+  .feed-head {
+    display: flex; align-items: baseline; gap: 8px;
+    font-size: 12.5px; color: var(--ink-3);
+    margin-bottom: 6px;
+    flex-wrap: wrap;
   }
-  .row-id { font-weight: 600; font-size: 13.5px; color: var(--ink); font-family: var(--font-mono); letter-spacing: -0.01em; }
-  .row-id.muted { color: var(--ink-2); font-weight: 500; font-family: var(--font-sans); }
-  .row-meta {
-    display: flex; gap: 12px; font-size: 12px; color: var(--ink-3);
-    margin: 5px 0 6px; flex-wrap: wrap;
+  .feed-head .peer { color: var(--ink); font-family: var(--font-mono); font-size: 12px; }
+  .feed-head .session { color: var(--ink-3); font-family: var(--font-mono); font-size: 11.5px; }
+  .feed-head .ago { margin-left: auto; color: var(--ink-3); }
+  .feed-body {
+    font-size: 14.5px;
+    color: var(--ink-2);
+    line-height: 1.55;
+    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
   }
-  .row-meta span { display: inline-flex; align-items: center; gap: 4px; }
-  .row-meta .num { color: var(--ink-2); font-weight: 500; }
-  .row-body {
-    font-size: 13px; color: var(--ink-2); line-height: 1.5;
-    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .row-body.empty { color: var(--ink-4); font-style: italic; }
+  .feed-empty { padding: 24px 0; color: var(--ink-3); font-style: italic; }
 
-  /* Badges */
-  .badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 11px; font-weight: 500; padding: 2px 8px;
-    border-radius: 999px;
-    background: var(--bg-sunken); color: var(--ink-2);
-    white-space: nowrap;
+  /* Memory State — table-style */
+  .mem-row {
+    display: flex; justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px dotted var(--line);
+    font-size: 14px;
   }
-  .badge.fresh { background: var(--ok-bg); color: var(--ok); }
-  .badge.stale { background: var(--warn-bg); color: var(--warn); }
-  .badge.cold  { background: var(--bg-sunken); color: var(--ink-3); }
-  .badge.has   { background: var(--accent-bg); color: var(--accent-2); }
-
-  /* Chips */
-  .chip {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 22px; height: 22px; border-radius: 50%;
-    font-size: 11px; font-weight: 600; margin-right: 8px; flex-shrink: 0;
-    background: var(--peer-bg); color: var(--peer);
+  .mem-row .k { color: var(--ink-2); }
+  .mem-row .v { font-variant-numeric: tabular-nums; color: var(--ink); }
+  .mem-row.total {
+    margin-top: 6px;
+    border-bottom: none;
+    border-top: 1px solid var(--ink);
+    padding-top: 14px;
   }
-  .chip.session { background: var(--session-bg); color: var(--session); }
-
-  /* Stats */
-  .stat {
-    display: flex; justify-content: space-between; align-items: baseline;
-    padding: 8px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px;
-  }
-  .stat:last-child { border-bottom: none; }
-  .stat .k { color: var(--ink-3); }
-  .stat .v { color: var(--ink); font-weight: 500; }
-  .stat.highlight {
-    padding-top: 10px; margin-top: 4px; border-top: 1px solid var(--line);
-  }
-  .stat.highlight .k { color: var(--accent-2); font-weight: 500; }
-  .stat.highlight .v { color: var(--accent-2); font-size: 15px; }
+  .mem-row.total .k { color: var(--ink); font-weight: 600; }
+  .mem-row.total .v { color: var(--accent); font-weight: 500; font-size: 16px; }
   .footnote {
-    font-size: 11.5px; color: var(--ink-3); line-height: 1.5;
-    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-soft);
+    font-size: 12.5px; color: var(--ink-3); line-height: 1.55;
+    margin-top: 12px;
   }
   .footnote em { color: var(--ink-2); font-style: normal; font-weight: 500; }
 
+  /* Proxy usage table */
   .ep-row {
-    display: grid; grid-template-columns: 1fr auto auto auto; gap: 12px;
-    align-items: baseline; padding: 6px 0;
-    border-bottom: 1px solid var(--line-soft); font-size: 12px;
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 12px;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px dotted var(--line);
+    font-size: 12.5px;
   }
   .ep-row:last-child { border-bottom: none; }
-  .ep-row .ep-path { font-family: var(--font-mono); font-size: 11px; color: var(--ink-2); word-break: break-all; }
+  .ep-row .ep-path { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); word-break: break-all; }
   .ep-row .v { font-variant-numeric: tabular-nums; color: var(--ink); }
   .ep-row .v.lat { color: var(--ink-3); }
   .ep-row .v.err { color: var(--bad); }
+  .ep-row .v.zero { color: var(--ink-4); }
 
-  /* Memory anatomy */
-  .anatomy {
-    display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin: 8px 0 12px;
+  .ep-label {
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 600;
+    display: grid; grid-template-columns: 1fr auto auto auto; gap: 12px;
+    padding: 0 0 4px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 4px;
   }
-  @media (max-width: 900px) { .anatomy { grid-template-columns: 1fr 1fr; } }
-  .anatomy-card {
-    border: 1px solid var(--line); border-radius: var(--r-sm);
-    background: var(--bg-sunken);
-    padding: 10px 12px; text-align: center;
-  }
-  .anatomy-card .icon { font-size: 18px; margin-bottom: 4px; }
-  .anatomy-card .name { font-size: 11.5px; font-weight: 600; color: var(--ink-2); }
-  .anatomy-card .val  { font-size: 13px; color: var(--ink); margin-top: 2px; font-variant-numeric: tabular-nums; }
-
-  /* Empty states */
-  .empty-state {
-    padding: 32px 22px; text-align: center;
-    color: var(--ink-3); font-size: 13px; line-height: 1.5;
-  }
-  .empty-state em { color: var(--ink-2); font-style: normal; font-weight: 500; }
 
   /* Log */
   .log {
-    margin-top: 12px; background: var(--bg-sunken);
-    border-radius: var(--r-sm); padding: 8px 10px;
-    font-family: var(--font-mono); font-size: 11.5px;
-    max-height: 160px; overflow-y: auto;
+    margin-top: 14px;
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 10px 14px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    max-height: 150px;
+    overflow-y: auto;
+    color: var(--ink-2);
   }
-  .log-row { color: var(--ink-2); padding: 2px 0; line-height: 1.4; }
+  .log-row { padding: 2px 0; line-height: 1.45; }
   .log-row .ts { color: var(--ink-4); margin-right: 8px; }
-  .log-row.ok  { color: var(--ok); }
+  .log-row.ok { color: var(--ok); }
   .log-row.err { color: var(--bad); }
-  .log-row b   { color: var(--accent-2); }
+  .log-row b { color: var(--accent); font-weight: 600; }
 
   /* Footer */
   .foot {
-    margin-top: 28px; padding-top: 18px;
+    margin-top: 64px;
+    padding-top: 20px;
     border-top: 1px solid var(--line);
-    font-size: 12px; color: var(--ink-3);
-    display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--ink-3);
+    display: flex; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
   }
-  .foot code { font-family: var(--font-mono); background: var(--bg-sunken); padding: 2px 6px; border-radius: 3px; }
+  .foot a { color: var(--ink-2); text-decoration: none; border-bottom: 1px dotted var(--ink-3); }
+  .foot code { font-family: var(--font-mono); background: var(--paper-2); padding: 1px 5px; border-radius: 2px; color: var(--ink-2); }
+
+  /* Session timeline (the new hero element, replaces graph) */
+  .timeline {
+    margin-top: 12px;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 18px 0;
+  }
+  .timeline-bar {
+    position: relative;
+    height: 24px;
+    background: var(--paper-2);
+    border-radius: 1px;
+  }
+  .timeline-tick {
+    position: absolute; top: 0; bottom: 0;
+    background: var(--accent);
+    border-radius: 1px;
+    opacity: 0.85;
+    min-width: 2px;
+  }
+  .timeline-tick.late { background: var(--ink-3); }
+  .timeline-tick.cold { background: var(--ink-4); }
+  .timeline-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: var(--ink-3);
+  }
+  .timeline-row .legend {
+    display: inline-flex; gap: 14px;
+  }
+  .timeline-legend-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 1px;
+    margin-right: 4px; vertical-align: middle;
+  }
+  .timeline-legend-dot.fresh { background: var(--accent); }
+  .timeline-legend-dot.stale { background: var(--ink-3); }
+  .timeline-legend-dot.cold  { background: var(--ink-4); }
+
+  /* Score line */
+  .line-data {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-2);
+    padding-top: 6px;
+  }
+  .line-data .k { color: var(--ink-3); }
 </style>
 </head>
 <body>
 <div class="page">
 
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark">H</span>
-      <span>Honcho Control</span>
-    </div>
-    <div class="topbar-right">
-      <span><span class="pulse live"></span><span id="last-updated">connecting…</span></span>
-    </div>
+  <!-- MASTHEAD -->
+  <header class="masthead">
+    <h1>Honcho Control</h1>
+    <p class="sub">A live read of your Honcho memory: sessions, peers, conclusions, dreams in flight.</p>
+    <p class="stamp" id="last-updated">Last updated · —</p>
   </header>
 
-  <div class="ws-bar" id="toolbar"></div>
-  <div class="ws-desc" id="ws-desc"></div>
+  <!-- WORKSPACE PICKER -->
+  <div class="workspaces">
+    <div class="ws-list" id="toolbar"></div>
+    <p class="ws-desc" id="ws-desc"></p>
+  </div>
 
+  <!-- ADVISORS / WARNINGS -->
   <div class="advisors" id="advisors"></div>
 
-  <div class="system" id="system">
-    <div class="system-cell">
-      <span class="system-label">Honcho host</span>
-      <span class="system-value mono" id="sys-honcho">—</span>
-    </div>
-    <div class="system-cell">
-      <span class="system-label">Deriver model</span>
-      <span class="system-value mono" id="sys-model">—</span>
-    </div>
-    <div class="system-cell">
-      <span class="system-label">Deriver queue</span>
-      <span class="system-value mono" id="sys-queue">—</span>
-    </div>
-    <div class="system-cell">
-      <span class="system-label">Proxy</span>
-      <span class="system-value mono" id="sys-proxy">—</span>
-    </div>
-  </div>
+  <!-- LEAD PROSE PARAGRAPH -->
+  <section id="lead">
+    <p class="prose" id="lead-prose">Loading…</p>
+  </section>
 
-  <section class="hero">
-    <div class="hero-head">
-      <div>
-        <h2 class="hero-title">Memory Graph
-          <span class="hint" tabindex="0"
-                data-tip="Each conversation is a session (green). Each person in a session is a peer (blue). Hover a node for details. This is the live shape of what Honcho knows about the workspace.">i</span>
-        </h2>
-        <p class="hero-sub">Sessions (green) connected to their participants (blue). Edge thickness scales with conversation length.</p>
-      </div>
-      <button class="btn" id="graph-reset" style="margin-top:6px">Re-layout</button>
-    </div>
-    <div class="hero-body">
-      <svg id="memory-graph"></svg>
-    </div>
-    <div class="graph-legend">
-      <span><span class="legend-dot" style="background:var(--peer)"></span>peer <em id="legend-peers"></em></span>
-      <span><span class="legend-dot" style="background:var(--session)"></span>session <em id="legend-sessions"></em></span>
-      <span><span class="legend-dot" style="background:var(--ink-4)"></span>edge = peer spoke in session</span>
-      <span id="legend-empty" style="display:none;color:var(--ink-4);font-style:italic">no graph data yet</span>
+  <!-- MEMORY ANATOMY: 4 small cells, compact -->
+  <section>
+    <h2>Anatomy
+      <span class="hint" tabindex="0"
+            data-tip="Honcho keeps four kinds of memory for you. The deriver works in the background and grows them automatically.">i</span>
+    </h2>
+    <div class="anatomy" id="anatomy">
+      <div class="anatomy-cell"><div class="icon">·</div><div class="name">Messages</div><div class="val num" id="an-messages">—</div></div>
+      <div class="anatomy-cell"><div class="icon">·</div><div class="name">Summaries</div><div class="val num" id="an-summaries">—</div></div>
+      <div class="anatomy-cell"><div class="icon">·</div><div class="name">Peer cards</div><div class="val num" id="an-cards">—</div></div>
+      <div class="anatomy-cell"><div class="icon">·</div><div class="name">Conclusions</div><div class="val num" id="an-conclusions">—</div></div>
     </div>
   </section>
 
-  <!-- Memory anatomy strip -->
-  <section class="panel" style="margin-bottom:14px">
-    <div class="panel-head">
-      <h2 class="panel-title">Memory Anatomy
-        <span class="hint" tabindex="0"
-              data-tip="Four kinds of state Honcho keeps for you. The deriver runs in the background and grows these automatically.">i</span>
-      </h2>
-    </div>
-    <div class="panel-body">
-      <div class="anatomy" id="anatomy">
-        <div class="anatomy-card"><div class="icon">💬</div><div class="name">Messages</div><div class="val num" id="an-messages">—</div></div>
-        <div class="anatomy-card"><div class="icon">📝</div><div class="name">Summaries</div><div class="val num" id="an-summaries">—</div></div>
-        <div class="anatomy-card"><div class="icon">📇</div><div class="name">Peer cards</div><div class="val num" id="an-cards">—</div></div>
-        <div class="anatomy-card"><div class="icon">💡</div><div class="name">Conclusions</div><div class="val num" id="an-conclusions">—</div></div>
+  <!-- SESSION TIMELINE (replaces sparse graph) -->
+  <section>
+    <h2>When did each session last speak
+      <span class="hint" tabindex="0"
+            data-tip="Each session plotted on a recency timeline. Sessions close together are recent; gaps mean quiet periods. Colored by freshness.">i</span>
+    </h2>
+    <div class="timeline">
+      <div class="timeline-bar" id="timeline-bar">
+        <span style="position:absolute;left:0;top:0;bottom:0;color:var(--ink-4);font-size:11px;padding:4px 0 0 6px">older</span>
+        <span style="position:absolute;right:0;top:0;bottom:0;color:var(--ink-4);font-size:11px;padding:4px 6px 0 0">today</span>
       </div>
-      <div class="footnote" style="margin-top:0;padding-top:0;border:none">
-        What each is for:
-        <em>Messages</em> are the raw conversation Honcho stores.
-        <em>Summaries</em> are compressed version Honcho writes when sessions grow long.
-        <em>Peer cards</em> are a profile of who each peer is, written by the deriver.
-        <em>Conclusions</em> are atomic facts the deriver extracts (e.g. "PK prefers Python").
+      <div class="timeline-row">
+        <span class="legend">
+          <span><span class="timeline-legend-dot fresh"></span>fresh (&lt;1h)</span>
+          <span><span class="timeline-legend-dot stale"></span>stale (&lt;3d)</span>
+          <span><span class="timeline-legend-dot cold"></span>cold</span>
+        </span>
+        <span id="timeline-note"></span>
       </div>
     </div>
   </section>
 
-  <div class="grid-2">
-    <section class="panel">
-      <div class="panel-head">
-        <h2 class="panel-title">Deriver Queue
-          <span class="hint" tabindex="0"
-                data-tip="Honcho's deriver is a background worker. The queue tracks pending, in-progress, and completed work units. 'Run dream now' schedules an `omni` consolidation across all messages.">i</span>
-        </h2>
-        <span id="deriver-status-host"></span>
+  <!-- DERIVER -->
+  <section>
+    <h2>The deriver
+      <span class="hint" tabindex="0"
+            data-tip="Honcho's deriver is a background worker. The queue tracks pending, in-progress, and completed work units. 'Run dream now' schedules an `omni` consolidation.">i</span>
+    </h2>
+    <div class="deriver">
+      <div class="label">Queue
+        <span id="deriver-status-host" style="margin-left:10px"></span>
       </div>
-      <div class="panel-body">
-        <div id="deriver-progress-label" style="font-size:13px;color:var(--ink-2)">—</div>
-        <div class="progress"><span id="deriver-bar" style="width:0%"></span></div>
-        <div class="progress-meta">
-          <span id="deriver-pending">—</span>
-          <span id="deriver-total">—</span>
-        </div>
-        <div class="actions">
-          <button class="btn primary" id="dream-btn">Run dream now</button>
-          <button class="btn" id="refresh-btn">Refresh</button>
-        </div>
-        <div class="log" id="log"></div>
+      <div id="deriver-progress-label" class="deriver-progress-label">—</div>
+      <div class="progress"><span id="deriver-bar" style="width:0%"></span></div>
+      <div class="progress-meta">
+        <span id="deriver-pending">—</span>
+        <span id="deriver-total">—</span>
       </div>
-    </section>
+      <div class="actions">
+        <button class="btn primary" id="dream-btn">Run dream now</button>
+        <button class="btn" id="refresh-btn">Refresh</button>
+      </div>
+      <div class="log" id="log"></div>
+    </div>
+  </section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <h2 class="panel-title">Message Activity · last 2 min
-          <span class="hint" tabindex="0"
-                data-tip="Total message count across all sessions in this workspace. The dashed line is the per-tick delta.">i</span>
-        </h2>
-        <span class="badge" id="polling-badge">polling…</span>
-      </div>
-      <div class="panel-body">
-        <div class="chart-wrap"><canvas id="msgChart"></canvas></div>
-        <div class="chart-stats">
-          <div>now <span class="v num accent" id="msgs-now">0</span></div>
-          <div>1m Δ <span class="v num" id="msgs-delta">+0</span></div>
-          <div>total <span class="v num" id="msgs-total">0</span></div>
-        </div>
-      </div>
-    </section>
-  </div>
+  <!-- MESSAGE ACTIVITY -->
+  <section>
+    <h2>Message activity · last 2 minutes
+      <span class="hint" tabindex="0"
+            data-tip="Total message count across all sessions in this workspace. The dashed line shows per-tick delta. Polling cadence is 2.5s.">i</span>
+    </h2>
+    <div class="chart-wrap"><canvas id="msgChart"></canvas></div>
+    <div class="chart-stats">
+      <div>now <span class="v num accent" id="msgs-now">0</span></div>
+      <div>1m Δ <span class="v num" id="msgs-delta">+0</span></div>
+      <div>total <span class="v num" id="msgs-total">0</span></div>
+    </div>
+  </section>
 
-  <div class="grid-2">
-    <section class="panel">
-      <div class="panel-head">
-        <h2 class="panel-title">Sessions
-          <span class="hint" tabindex="0"
-                data-tip="A session is one conversation thread between two peers. Green chip = fresh (&lt;1h), amber = stale (&lt;3d), gray = older.">i</span>
-        </h2>
-        <span class="badge" id="sessions-count">0</span>
-      </div>
-      <div class="panel-body flush"><div class="scroll" id="sessions"></div></div>
-    </section>
+  <!-- SESSIONS -->
+  <section>
+    <h2>Sessions
+      <span class="hint" tabindex="0"
+            data-tip="A session is one conversation thread between two peers. Each user/agent pair gets its own session automatically.">i</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--ink-3);font-weight:400" id="sessions-count">0</span>
+    </h2>
+    <div class="session-list" id="sessions"></div>
+  </section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <h2 class="panel-title">Peers
-          <span class="hint" tabindex="0"
-                data-tip="A peer is one participant — you, the assistant, or any external user. Each gets a card and accumulates conclusions.">i</span>
-        </h2>
-        <span class="badge" id="peers-count">0</span>
-      </div>
-      <div class="panel-body flush"><div class="scroll" id="peers"></div></div>
-    </section>
-  </div>
+  <!-- PEERS -->
+  <section>
+    <h2>Peers
+      <span class="hint" tabindex="0"
+            data-tip="A peer is one participant in any conversation — you, the assistant, or an external user. Each accumulates its own card and its own conclusions over time.">i</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--ink-3);font-weight:400" id="peers-count">0</span>
+    </h2>
+    <div class="peer-list" id="peers"></div>
+  </section>
 
-  <div class="grid-2">
-    <section class="panel">
-      <div class="panel-head">
-        <h2 class="panel-title">Recent Messages
-          <span class="hint" tabindex="0"
-                data-tip="The most recent message from each session. Freshness chips show how recent that session is.">i</span>
-        </h2>
-      </div>
-      <div class="panel-body flush"><div class="scroll" id="feed"></div></div>
-    </section>
+  <!-- RECENT MESSAGES -->
+  <section>
+    <h2>Recent messages
+      <span class="hint" tabindex="0"
+            data-tip="The most recent message from each session, ordered by recency. Quoted in context — what was said, who said it, when.">i</span>
+    </h2>
+    <div class="feed" id="feed"></div>
+  </section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <h2 class="panel-title">Memory State
-          <span class="hint" tabindex="0"
-                data-tip="Honcho's API has no token field. We sum character counts from each memory type and divide by 4 — a rough English-text rule of thumb.">i</span>
-        </h2>
-        <span class="badge" id="memory-total">~0</span>
-      </div>
-      <div class="panel-body"><div id="memory-state"></div></div>
-    </section>
-  </div>
+  <!-- MEMORY STATE -->
+  <section>
+    <h2>Memory state
+      <span class="hint" tabindex="0"
+            data-tip="Honcho's API has no token field; this is character count divided by four, a rough rule of thumb for English text. For real numbers, instrument the LLM provider directly.">i</span>
+    </h2>
+    <div id="memory-state"></div>
+  </section>
 
-  <div class="grid-2">
-    <section class="panel">
-      <div class="panel-head">
-        <h2 class="panel-title">Proxy Usage · last 60s
-          <span class="hint" tabindex="0"
-                data-tip="Volume and latency of calls this dashboard makes to Honcho. Not Honcho's internal LLM cost — that's not exposed.">i</span>
-        </h2>
-        <button class="btn" id="usage-reset" style="padding:4px 10px;font-size:12px">Reset</button>
-      </div>
-      <div class="panel-body"><div id="usage"></div></div>
-    </section>
+  <!-- PROXY USAGE -->
+  <section>
+    <h2>Proxy usage · last 60 s
+      <span class="hint" tabindex="0"
+            data-tip="Volume and latency of calls this dashboard makes to Honcho, on the rolling minute. These are dashboard outbound calls, not Honcho's internal LLM costs — those aren't exposed.">i</span>
+      <button class="btn" id="usage-reset" style="margin-left:auto;font-size:11px;padding:3px 10px">Reset</button>
+    </h2>
+    <div id="usage"></div>
+  </section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <h2 class="panel-title">Workspace Totals</h2>
-      </div>
-      <div class="panel-body"><div id="totals"></div></div>
-    </section>
-  </div>
+  <!-- SYSTEM FOOTER -->
+  <section>
+    <h2>System</h2>
+    <div class="stats" id="system"></div>
+    <div class="line-data" id="line-data"></div>
+  </section>
 
   <footer class="foot">
-    <div>Honcho Control · stdlib-only proxy · source on
-      <a href="https://github.com/PraveenKumarSridhar/honcho-control-dashboard" target="_blank" rel="noreferrer">github.com/PraveenKumarSridhar/honcho-control-dashboard</a>
-    </div>
-    <div><code id="sys-pin">http://127.0.0.1:7777</code></div>
+    <div>Source on <a href="https://github.com/PraveenKumarSridhar/honcho-control-dashboard" target="_blank" rel="noreferrer">github.com/PraveenKumarSridhar/honcho-control-dashboard</a></div>
+    <div>Served on <code id="sys-pin">127.0.0.1:7777</code></div>
   </footer>
 
 </div>
@@ -603,36 +707,39 @@
 const POLL_MS = 2500;
 const HISTORY_POINTS = 48;
 
-const state = { ws: null, prevTotals: null, peers: [] };
+const state = { ws: null, prevTotals: null, peers: [], openHint: null };
 
-// ---------- helpers ---------------------------------------------------------
 const $ = (id) => document.getElementById(id);
 
 function escapeHtml(s) {
   return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
-function initials(s) {
-  if (!s) return '?';
-  const p = s.replace(/^user-default-/, '').split(/[-_]/);
-  return ((p[0]?.[0]) || '?').toUpperCase() + (p[1]?.[0] || '').toUpperCase();
-}
 function formatNum(n) {
   if (n === null || n === undefined) return '—';
   return Number(n).toLocaleString();
 }
-function relativeTime(ts) {
-  if (!ts) return '—';
-  let d;
-  if (ts.length > 20 && ts.includes('-')) d = new Date(ts).getTime();
-  else {
-    try {
-      const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-      let ms = 0;
-      for (let i = 0; i < 10; i++) { const v = CROCKFORD.indexOf(ts[i]); if (v<0) break; ms = ms*32 + v; }
-      d = ms || null;
-    } catch(_) { d = null; }
+
+// Pretty timestamp parsing for ISO + Honcho ULIDs (base32 of 48 bits)
+function parseHonchoTs(ts) {
+  if (!ts) return null;
+  if (ts.length > 20 && ts.includes('-')) {
+    const d = new Date(ts).getTime();
+    if (!isNaN(d)) return d;
   }
-  if (!d || isNaN(d)) return ts.slice(0, 8) + '…';
+  try {
+    const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+    let ms = 0;
+    for (let i = 0; i < 10; i++) {
+      const v = CROCKFORD.indexOf(ts[i]);
+      if (v < 0) return null;
+      ms = ms * 32 + v;
+    }
+    return ms || null;
+  } catch (_) { return null; }
+}
+function relativeTime(ts) {
+  const d = parseHonchoTs(ts);
+  if (!d) return ts ? (ts.slice(0,8) + '…') : '—';
   const diff = Date.now() - d, abs = Math.abs(diff), future = diff < 0;
   if (abs < 60_000) return future ? 'in moments' : 'just now';
   const m = Math.round(abs / 60_000);
@@ -644,10 +751,8 @@ function relativeTime(ts) {
   return new Date(d).toLocaleDateString();
 }
 function freshness(ts) {
-  if (!ts) return 'cold';
-  let d;
-  if (ts.length > 20 && ts.includes('-')) d = new Date(ts).getTime();
-  else return 'cold';
+  const d = parseHonchoTs(ts);
+  if (!d) return 'cold';
   const hours = (Date.now() - d) / 3_600_000;
   if (hours < 1) return 'fresh';
   if (hours < 24 * 3) return 'stale';
@@ -664,7 +769,27 @@ function log(msg, level = '') {
   while (box.children.length > 80) box.removeChild(box.lastChild);
 }
 
-// ---------- workspace pills + description -----------------------------------
+// ---------- tooltips (click to pin, click-out to dismiss) ------------------
+function setupHints() {
+  document.querySelectorAll('.hint').forEach(h => {
+    h.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (state.openHint && state.openHint !== h) {
+        state.openHint.classList.remove('is-open');
+      }
+      const open = h.classList.toggle('is-open');
+      state.openHint = open ? h : null;
+    });
+  });
+  document.addEventListener('click', () => {
+    if (state.openHint) {
+      state.openHint.classList.remove('is-open');
+      state.openHint = null;
+    }
+  });
+}
+
+// ---------- workspace pills -----------------------------------------------
 function renderToolbar(workspaces, active, meta) {
   const tb = $('toolbar');
   tb.innerHTML = '';
@@ -678,37 +803,96 @@ function renderToolbar(workspaces, active, meta) {
   });
   const desc = meta && meta[active];
   $('ws-desc').innerHTML = desc
-    ? `Active workspace: <strong>${escapeHtml(active)}</strong> — ${escapeHtml(desc)}`
+    ? `<strong>${escapeHtml(active)}</strong> &mdash; ${escapeHtml(desc)}`
     : '';
 }
 
-// ---------- system strip ----------------------------------------------------
-function renderSystem(sys, dconfig, queue) {
-  $('sys-honcho').textContent = (sys && sys.honcho_host) || '—';
-  const m = (dconfig && dconfig.DERIVER_MODEL_CONFIG__MODEL) || 'unknown';
-  const t = (dconfig && dconfig.DERIVER_MODEL_CONFIG__TRANSPORT) || 'openai';
-  const base = (dconfig && dconfig.LLM_BASE_URL) || '';
-  const en = (dconfig && dconfig.DERIVER_ENABLED) || '';
-  $('sys-model').innerHTML = `<span style="color:var(--accent-2)">${escapeHtml(m)}</span> <span style="color:var(--ink-3)">via ${escapeHtml(t)}</span>`;
-  if (base) $('sys-model').title = `base url: ${base}\nenabled: ${en}`;
-  const done = queue && queue.completed_work_units || 0;
-  const total = queue && queue.total_work_units || 0;
-  const busy = queue && ((queue.pending_work_units||0) + (queue.in_progress_work_units||0)) > 0;
-  $('sys-queue').innerHTML = `<span class="${busy?'ok':''}">${done} / ${total}</span> · ${queue?.in_progress_work_units||0} active`;
-  const proxyPort = (sys && sys.proxy_host) || '127.0.0.1:7777';
-  $('sys-proxy').textContent = proxyPort;
-  $('sys-pin').textContent = `http://${proxyPort}`;
+// ---------- lead prose -----------------------------------------------------
+function renderLead(data) {
+  const peerCount = data.peers.length;
+  const sessCount = data.sessions.length;
+  const msgCount = data.totals.messages;
+  const concl = data.totals.conclusions_total;
+  const mostRecent = data.sessions[0]; // already sorted by recency
+  const ago = mostRecent ? relativeTime(mostRecent.last_ts) : 'never';
+
+  let text;
+  if (sessCount === 0) {
+    text = `The <strong>${escapeHtml(data.active_workspace)}</strong> workspace has no sessions yet. Start a conversation with the agent and a session will appear here within a few seconds.`;
+  } else {
+    text = `In the <strong>${escapeHtml(data.active_workspace)}</strong> workspace, Honcho is tracking <strong>${sessCount}</strong> conversation${sessCount === 1 ? '' : 's'} across <strong>${peerCount}</strong> peer${peerCount === 1 ? '' : 's'}, with <strong>${msgCount.toLocaleString()}</strong> message${msgCount === 1 ? '' : 's'} stored. `;
+    if (concl === 0) {
+      text += `The deriver hasn't yet extracted any atomic conclusions — see the advisor below if that's surprising. `;
+    } else {
+      text += `<strong>${concl}</strong> conclusion${concl === 1 ? '' : 's'} extracted so far. `;
+    }
+    text += `Most recent activity: <strong>${escapeHtml(mostRecent.id)}</strong>, ${ago}.`;
+  }
+  $('lead-prose').innerHTML = text;
 }
 
-// ---------- advisors --------------------------------------------------------
+// ---------- advisors -------------------------------------------------------
 function renderAdvisors(advisors) {
   const host = $('advisors');
   if (!advisors || !advisors.length) { host.innerHTML = ''; return; }
   host.innerHTML = advisors.map(a => `
-    <div class="advisor ${a.level}">
+    <div class="advisor">
       <div class="advisor-title">${escapeHtml(a.title)}</div>
       <div class="advisor-body">${escapeHtml(a.body)}</div>
     </div>`).join('');
+}
+
+// ---------- anatomy --------------------------------------------------------
+function renderAnatomy(data) {
+  const sess = data.sessions || [];
+  const msgs = data.totals?.messages || 0;
+  const sumChars = sess.reduce((a, s) => a + (s.short_summary_chars||0) + (s.long_summary_chars||0), 0);
+  const cardChars = (data.peers || []).reduce((a, p) => a + (p.card_size||0), 0);
+  const concl = data.totals?.conclusions_total || 0;
+  $('an-messages').textContent  = formatNum(msgs);
+  $('an-summaries').textContent = sumChars > 0 ? formatNum(sumChars) : '0';
+  $('an-cards').textContent     = cardChars > 0 ? formatNum(cardChars) : '0';
+  $('an-conclusions').textContent = formatNum(concl);
+}
+
+// ---------- session timeline (replaces graph) -----------------------------
+function renderTimeline(sessions) {
+  const bar = $('timeline-bar');
+  // Strip existing ticks but keep the "older/today" labels
+  bar.querySelectorAll('.timeline-tick, .tick-label').forEach(n => n.remove());
+
+  if (!sessions.length) {
+    $('timeline-note').textContent = 'no sessions yet';
+    return;
+  }
+
+  // Find newest and oldest recency (in ms)
+  const dates = sessions.map(s => parseHonchoTs(s.last_ts)).filter(Boolean);
+  if (!dates.length) return;
+  const max = Math.max(...dates);
+  const min = Math.min(...dates);
+  const range = Math.max(1, max - min);
+
+  // Each tick: width proportional to message count, x = how recent (rightmost = now)
+  sessions.forEach(s => {
+    const d = parseHonchoTs(s.last_ts);
+    if (!d) return;
+    const xPct = ((d - min) / range) * 100;
+    const w = Math.max(2, Math.min(8, Math.sqrt(s.message_count || 1) * 1.3));
+    const f = freshness(s.last_ts);
+    const cls = `timeline-tick ${f === 'fresh' ? '' : (f === 'stale' ? 'late' : 'cold')}`;
+    const t = document.createElement('div');
+    t.className = cls;
+    t.style.left = `calc(${xPct}% - ${w/2}px)`;
+    t.style.width = `${w}px`;
+    t.title = `${s.id}\n${relativeTime(s.last_ts)}\n${s.message_count} msgs`;
+    bar.appendChild(t);
+  });
+
+  const freshCount = sessions.filter(s => freshness(s.last_ts) === 'fresh').length;
+  $('timeline-note').textContent =
+    `${sessions.length} session${sessions.length === 1 ? '' : 's'} · ` +
+    `${freshCount} fresh · oldest ${relativeTime(sessions[sessions.length-1].last_ts)}`;
 }
 
 // ---------- deriver --------------------------------------------------------
@@ -720,108 +904,92 @@ function renderDeriver(q) {
   const pct = total > 0 ? Math.round(done / total * 100) : 0;
   $('deriver-bar').style.width = pct + '%';
   $('deriver-progress-label').textContent =
-    total === 0 ? 'No work scheduled yet — trigger one to start.'
+    total === 0 ? 'No work scheduled yet. Trigger one to start.'
                 : `${done} of ${total} work units completed · ${pct}%`;
   $('deriver-pending').textContent = `${pending} pending · ${inprog} in progress`;
   $('deriver-total').textContent = total > 0 ? `${total} total` : 'awaiting input';
   const busy = pending > 0 || inprog > 0;
   $('deriver-status-host').innerHTML =
     `<span class="status-pill ${busy?'busy':'idle'}">
-       <span class="pulse ${busy?'live':''}"></span>${busy ? 'processing' : (total > 0 ? 'complete' : 'idle')}
+       <span class="pulse ${busy?'live':''}"></span>${busy ? 'processing' : (total > 0 ? 'completed' : 'idle')}
      </span>`;
 }
 
-// ---------- anatomy --------------------------------------------------------
-function renderAnatomy(data) {
-  const sess = data.sessions || [];
-  const msgs = data.totals?.messages || 0;
-  const sumChars = sess.reduce((a, s) => a + (s.short_summary_chars||0) + (s.long_summary_chars||0), 0);
-  const cardChars = (data.peers || []).reduce((a, p) => a + (p.card_size||0), 0);
-  const concl = data.totals?.conclusions_total || 0;
-  $('an-messages').textContent  = formatNum(msgs);
-  $('an-summaries').textContent = sumChars > 0 ? formatNum(sumChars) + ' chars' : 'none';
-  $('an-cards').textContent     = cardChars > 0 ? formatNum(cardChars) + ' chars' : 'none';
-  $('an-conclusions').textContent = formatNum(concl);
-}
-
-// ---------- sessions, peers, feed -----------------------------------------
+// ---------- sessions / peers / feed ---------------------------------------
 function renderSessions(sessions) {
   const host = $('sessions');
-  $('sessions-count').textContent = sessions.length;
+  $('sessions-count').textContent = `${sessions.length} session${sessions.length === 1 ? '' : 's'}`;
   if (!sessions.length) {
-    host.innerHTML = '<div class="empty-state">No sessions yet.<br><em>Start a conversation with the agent to create one.</em></div>';
+    host.innerHTML = '<div class="empty">No sessions yet. Start a conversation to create one.</div>';
     return;
   }
   host.innerHTML = sessions.map(s => {
-    const f = freshness(s.last_ts);
     const summary = s.short_summary
-      ? `<div class="row-body">${escapeHtml(s.short_summary)}</div>`
-      : `<div class="row-body empty">No summary yet — the deriver needs more messages, or it's blocked upstream (see banner).</div>`;
-    return `<div class="row">
-      <div class="row-head">
-        <div class="row-id">${escapeHtml(s.id)}</div>
-        <span class="badge ${f}">${relativeTime(s.last_ts)}</span>
-      </div>
-      <div class="row-meta">
-        <span><span class="num">${formatNum(s.message_count)}</span> msgs</span>
-        <span><span class="num">${formatNum(s.message_chars)}</span> chars</span>
-        <span>last by <span class="mono" style="color:var(--ink-2)">${escapeHtml(s.last_peer || '—')}</span></span>
+      ? `<div class="session-summary">${escapeHtml(s.short_summary)}</div>`
+      : `<div class="session-summary empty">No summary yet — the deriver needs more messages, or it's blocked upstream.</div>`;
+    const lastPeer = s.last_peer ? s.last_peer.replace(/^user-default-/, '') : '—';
+    return `<div class="session">
+      <div class="session-name">${escapeHtml(s.id)}</div>
+      <div class="session-meta">
+        <span><span class="v num">${formatNum(s.message_count)}</span> messages</span>
+        <span><span class="v num">${formatNum(s.message_chars)}</span> characters</span>
+        <span>last by <span class="mono">${escapeHtml(lastPeer)}</span></span>
       </div>
       ${summary}
+      <div class="session-aside">
+        <span class="ago">${relativeTime(s.last_ts)}</span>
+      </div>
     </div>`;
   }).join('');
 }
 
 function renderPeers(peers) {
   const host = $('peers');
-  $('peers-count').textContent = peers.length;
+  $('peers-count').textContent = `${peers.length} peer${peers.length === 1 ? '' : 's'}`;
   if (!peers.length) {
-    host.innerHTML = '<div class="empty-state">No peers yet.</div>';
+    host.innerHTML = '<div class="empty">No peers yet.</div>';
     return;
   }
-  host.innerHTML = peers.map(p => `
-    <div class="row">
-      <div class="row-head">
-        <div style="display:flex;align-items:center"><span class="chip">${initials(p.id)}</span><span class="row-id muted">${escapeHtml(p.id)}</span></div>
-        <span class="badge ${p.has_card ? 'has' : 'cold'}">${p.has_card ? formatNum(p.card_size) + ' chars' : 'no card'}</span>
+  host.innerHTML = peers.map(p => {
+    const name = p.id.replace(/^user-default-/, '');
+    return `<div class="peer">
+      <div>
+        <span class="peer-name">${escapeHtml(name)}</span>
+        ${p.has_card ? '' : ' <span style="color:var(--ink-4);font-size:11px">· no card yet</span>'}
       </div>
-      <div class="row-meta"><span><span class="num">${formatNum(p.conclusions)}</span> conclusions</span></div>
-      ${p.has_card
-        ? `<div class="row-body">Peer card: ${formatNum(p.card_size)} chars of distilled context.</div>`
-        : `<div class="row-body empty">No peer card yet — appears after the deriver writes one.</div>`}
-    </div>
-  `).join('');
+      <div class="peer-meta">
+        <span class="v num">${formatNum(p.conclusions)}</span> conclusions
+        ${p.has_card ? ` · <span class="v num">${formatNum(p.card_size)}</span>c card` : ''}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function renderFeed(feed) {
   const host = $('feed');
   if (!feed.length) {
-    host.innerHTML = '<div class="empty-state">No messages yet.</div>';
+    host.innerHTML = '<div class="feed-empty">No messages yet.</div>';
     return;
   }
   host.innerHTML = feed.map(f => `
-    <div class="row">
-      <div class="row-head">
-        <div style="display:flex;align-items:center">
-          <span class="chip">${initials(f.peer)}</span>
-          <span class="row-id muted">${escapeHtml(f.peer || '?')}</span>
-          <span style="color:var(--ink-4);font-size:12px">in</span>
-          <span class="mono" style="font-size:12px;color:var(--ink-2)">${escapeHtml(f.session)}</span>
-        </div>
-        <span class="badge ${freshness(f.ts)}">${relativeTime(f.ts)}</span>
+    <div class="feed-row">
+      <div class="feed-head">
+        <span class="peer">${escapeHtml((f.peer || '?').replace(/^user-default-/, ''))}</span>
+        <span>said in</span>
+        <span class="session">${escapeHtml(f.session)}</span>
+        <span class="ago">${relativeTime(f.ts)}</span>
       </div>
-      <div class="row-body">${escapeHtml(f.preview)}</div>
+      <div class="feed-body">${escapeHtml(f.preview)}</div>
     </div>`).join('');
 }
 
 // ---------- memory state ---------------------------------------------------
 function renderMemoryState(ms) {
   const host = $('memory-state');
-  if (!ms) { host.innerHTML = '<div class="empty-state">No data</div>'; return; }
+  if (!ms) { host.innerHTML = '<div class="footnote">No data.</div>'; return; }
   const allZero = !ms.message_chars && !ms.short_summary_chars && !ms.long_summary_chars && !ms.peer_card_chars && !ms.conclusion_chars;
   if (allZero) {
-    host.innerHTML = '<div class="empty-state">Memory state is empty.<br><em>This workspace has no message, summary, card, or conclusion content yet.</em></div>';
-    $('memory-total').textContent = '~0';
+    host.innerHTML = '<div class="footnote"><em>Empty.</em> This workspace has no message, summary, card, or conclusion content yet.</div>';
     return;
   }
   const rows = [
@@ -832,199 +1000,92 @@ function renderMemoryState(ms) {
     ['Conclusions',     ms.conclusion_chars],
   ].filter(([_, v]) => v > 0);
   host.innerHTML = `
-    ${rows.map(([k,v]) => `<div class="stat"><span class="k">${k}</span><span class="v num">${formatNum(v)} chars</span></div>`).join('')}
-    <div class="stat highlight">
+    ${rows.map(([k,v]) => `<div class="mem-row">
+        <span class="k">${k}</span>
+        <span class="v">${formatNum(v)} characters</span>
+      </div>`).join('')}
+    <div class="mem-row total">
       <span class="k">Approximate total</span>
-      <span class="v num">~${formatNum(ms.approx_tokens_surrogate)} tokens</span>
+      <span class="v">~${formatNum(ms.approx_tokens_surrogate)} tokens</span>
     </div>
-    <div class="footnote"><em>Surrogate, not exact.</em> chars ÷ 4 is a rough English rule of thumb. For real tokens, instrument your LLM provider.</div>`;
-  $('memory-total').textContent = `~${formatNum(ms.approx_tokens_surrogate)}`;
+    <div class="footnote"><em>Surrogate, not exact.</em> Honcho's API has no token field; characters ÷ 4 is a rough rule of thumb for English text. For real numbers, instrument the LLM provider directly.</div>`;
 }
 
 // ---------- proxy usage ----------------------------------------------------
 function renderUsage(u) {
   const host = $('usage');
-  if (!u) { host.innerHTML = '<div class="empty-state">No data yet.</div>'; return; }
-  const baseRows = [
-    [`Calls in last ${u.window_seconds}s`, formatNum(u.calls_in_window)],
-    ['Calls/sec (rolling avg)', u.calls_per_sec_avg.toFixed(3)],
-    ['Total recorded', formatNum(u.total_calls_recorded)],
-    ['Dashboard polls served', formatNum(u.snapshots)],
+  if (!u) { host.innerHTML = '<div class="footnote">No data yet.</div>'; return; }
+  const base = [
+    [`calls (last ${u.window_seconds}s)`, formatNum(u.calls_in_window)],
+    ['calls/sec (rolling)', u.calls_per_sec_avg.toFixed(3)],
+    ['total recorded', formatNum(u.total_calls_recorded)],
+    ['dashboard polls', formatNum(u.snapshots)],
   ];
   const top = (u.endpoints || []).slice(0, 6);
+  const epHeader = `<div class="ep-label"><span>Endpoint</span><span>calls</span><span>avg lat</span><span>errors</span></div>`;
   const ep = top.map(e => `
     <div class="ep-row">
       <span class="ep-path">${escapeHtml(e.endpoint)}</span>
       <span class="v num">${e.calls}×</span>
       <span class="v lat num">${e.avg_lat_ms}ms</span>
-      <span class="v err num">${e.errors}✗</span>
+      <span class="v ${e.errors ? 'err' : 'zero'} num">${e.errors}</span>
     </div>`).join('');
   host.innerHTML = `
-    ${baseRows.map(([k,v]) => `<div class="stat"><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('')}
-    ${ep ? `<div style="margin:12px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--ink-3);font-weight:600">Top endpoints</div>${ep}` : ''}
-    <div class="footnote"><em>Why 0 tokens?</em> Honcho doesn't surface its own LLM call volume. These are your dashboard's outbound calls.</div>`;
+    ${base.map(([k,v]) => `<div class="mem-row">
+        <span class="k">${k}</span>
+        <span class="v">${v}</span>
+      </div>`).join('')}
+    ${top.length ? `<div style="margin-top:18px">${epHeader}${ep}</div>` : ''}
+    <div class="footnote"><em>Why no token count?</em> Honcho doesn't surface its own LLM call volume. These are the dashboard's outbound calls to Honcho.</div>`;
 }
 
-// ---------- workspace totals -----------------------------------------------
-function renderTotals(t, q) {
-  const rows = [
-    ['Work units (done / total)', `${t.wu_done} / ${t.wu_total}`],
-    ['Work units (in progress)',   t.wu_progress],
-    ['Work units (pending)',       t.wu_pending],
-    ['Sessions',                   t.sessions],
-    ['Peers',                      t.peers],
-    ['Messages',                   t.messages],
-    ['Conclusions',                t.conclusions_total],
+// ---------- system footer --------------------------------------------------
+function renderSystem(sys, dconfig) {
+  const cells = [
+    ['Honcho host',    (sys.honcho_host || '—')],
+    ['Deriver model',  dconfig?.DERIVER_MODEL_CONFIG__MODEL || '—'],
+    ['Deriver enabled',dconfig?.DERIVER_ENABLED || '—'],
+    ['Workspace',      state.ws || '—'],
   ];
-  $('totals').innerHTML = rows.map(([k,v]) =>
-    `<div class="stat"><span class="k">${k}</span><span class="v num">${v}</span></div>`).join('');
-}
+  $('system').innerHTML = cells.map(([k, v]) =>
+    `<div class="stat-cell"><span class="stat-label">${k}</span><span class="stat-value mono">${escapeHtml(v)}</span></div>`
+  ).join('');
 
-// ---------- memory graph (SVG force-directed) ------------------------------
-let graphLayout = null;
-function renderGraph(graph) {
-  const svg = $('memory-graph');
-  const W = svg.clientWidth || 720;
-  const H = 360;
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.innerHTML = '';
-
-  const nodes = graph.nodes || [];
-  const edges = graph.edges || [];
-  $('legend-peers').textContent = `(${nodes.filter(n => n.kind === 'peer').length})`;
-  $('legend-sessions').textContent = `(${nodes.filter(n => n.kind === 'session').length})`;
-  $('legend-empty').style.display = nodes.length ? 'none' : 'inline';
-
-  if (!nodes.length) {
-    svg.innerHTML = `<text x="${W/2}" y="${H/2}" text-anchor="middle" fill="var(--ink-4)" font-size="13" font-family="var(--font-sans)">No data to render yet.</text>`;
-    return;
-  }
-
-  // deterministic seeded layout: place sessions in a horizontal band,
-  // peers in a vertical band, with mild jitter so refreshes are stable.
-  const sess = nodes.filter(n => n.kind === 'session');
-  const peers = nodes.filter(n => n.kind === 'peer');
-  const positions = new Map();
-
-  const peerX = W * 0.18;
-  const sessX = W * 0.78;
-  const peerSpacing = H / (peers.length + 1);
-  const sessSpacing = H / (sess.length + 1);
-  peers.forEach((n, i) => {
-    positions.set(n.id, {
-      x: peerX + (hash(n.id) % 60 - 30),
-      y: peerSpacing * (i + 1) + (hash(n.id + 'y') % 40 - 20),
-      kind: 'peer',
-      label: n.id,
-    });
-  });
-  sess.forEach((n, i) => {
-    positions.set(n.id, {
-      x: sessX + (hash(n.id) % 60 - 30),
-      y: sessSpacing * (i + 1) + (hash(n.id + 'y') % 40 - 20),
-      kind: 'session',
-      label: n.id,
-      size: n.size || 0,
-    });
-  });
-
-  // Edges: count how many messages between source/target → thickness
-  const edgeWeight = new Map();
-  for (const e of edges) {
-    const k = `${e.source}|${e.target}`;
-    edgeWeight.set(k, (edgeWeight.get(k) || 0) + 1);
-  }
-
-  // Render edges first
-  const ns = 'http://www.w3.org/2000/svg';
-  const gEdges = document.createElementNS(ns, 'g');
-  for (const e of edges) {
-    const a = positions.get(e.source); const b = positions.get(e.target);
-    if (!a || !b) continue;
-    const w = edgeWeight.get(`${e.source}|${e.target}`) || 1;
-    const line = document.createElementNS(ns, 'line');
-    line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
-    line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
-    line.setAttribute('stroke', 'var(--ink-4)');
-    line.setAttribute('stroke-width', Math.min(4, 0.8 + w * 0.6));
-    line.setAttribute('stroke-opacity', '0.5');
-    gEdges.appendChild(line);
-  }
-  svg.appendChild(gEdges);
-
-  // Render nodes
-  const gNodes = document.createElementNS(ns, 'g');
-  for (const n of nodes) {
-    const p = positions.get(n.id);
-    if (!p) continue;
-    const r = p.kind === 'session'
-      ? 14 + Math.min(14, Math.sqrt(Math.max(1, p.size || 0)) * 1.2)
-      : 11;
-    const fill = p.kind === 'session' ? 'var(--session)' : 'var(--peer)';
-    const c = document.createElementNS(ns, 'circle');
-    c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', r);
-    c.setAttribute('fill', fill); c.setAttribute('fill-opacity', '0.85');
-    c.setAttribute('stroke', 'var(--bg-raised)'); c.setAttribute('stroke-width', '3');
-    const t = document.createElementNS(ns, 'title');
-    t.textContent = `${p.kind === 'session' ? 'Session' : 'Peer'}: ${p.label}${p.size?`  ·  ${p.size} messages`:''}`;
-    c.appendChild(t);
-    gNodes.appendChild(c);
-
-    // Label
-    const lbl = document.createElementNS(ns, 'text');
-    lbl.setAttribute('x', p.x); lbl.setAttribute('y', p.kind === 'session' ? p.y - r - 6 : p.y + r + 14);
-    lbl.setAttribute('text-anchor', 'middle');
-    lbl.setAttribute('fill', 'var(--ink-2)');
-    lbl.setAttribute('font-size', '11');
-    lbl.setAttribute('font-family', 'var(--font-sans)');
-    lbl.textContent = p.label.length > 14 ? p.label.slice(0, 13) + '…' : p.label;
-    gNodes.appendChild(lbl);
-
-    // initial chip inside the circle for peers
-    if (p.kind === 'peer') {
-      const init = document.createElementNS(ns, 'text');
-      init.setAttribute('x', p.x); init.setAttribute('y', p.y + 4);
-      init.setAttribute('text-anchor', 'middle');
-      init.setAttribute('fill', '#fff');
-      init.setAttribute('font-size', '10');
-      init.setAttribute('font-weight', '700');
-      init.setAttribute('font-family', 'var(--font-mono)');
-      init.textContent = initials(p.label).slice(0, 2);
-      gNodes.appendChild(init);
-    }
-  }
-  svg.appendChild(gNodes);
-}
-function hash(s) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h;
+  const data = [
+    ['API',     'v3 REST'],
+    ['Proxy',   sys.proxy_host || '127.0.0.1:7777'],
+    ['Polling', `${(1000/POLL_MS).toFixed(1)} Hz`],
+  ];
+  $('line-data').innerHTML = data.map(([k,v]) =>
+    `<span class="k">${k}</span>: <span class="v">${escapeHtml(v)}</span>`
+  ).join(' &nbsp;·&nbsp; ');
+  $('sys-pin').textContent = sys.proxy_host || '127.0.0.1:7777';
 }
 
 // ---------- chart ----------------------------------------------------------
 let chart;
 function initChart() {
   const ctx = $('msgChart').getContext('2d');
-  const grad = ctx.createLinearGradient(0, 0, 0, 200);
-  grad.addColorStop(0, 'rgba(20,160,133,0.20)');
-  grad.addColorStop(1, 'rgba(20,160,133,0.0)');
+  const grad = ctx.createLinearGradient(0, 0, 0, 180);
+  grad.addColorStop(0, 'rgba(28,110,84,0.10)');
+  grad.addColorStop(1, 'rgba(28,110,84,0.0)');
   chart = new Chart(ctx, {
     type: 'line',
     data: {
       labels: Array.from({length: HISTORY_POINTS}, (_, i) => i),
       datasets: [
-        { data: Array(HISTORY_POINTS).fill(0), borderColor: '#14a085', backgroundColor: grad, borderWidth: 2, tension: 0.3, pointRadius: 0, fill: true },
-        { data: Array(HISTORY_POINTS).fill(0), borderColor: '#aab3bf', borderWidth: 1, borderDash: [3,3], tension: 0.2, pointRadius: 0, fill: false, yAxisID: 'y1' },
+        { data: Array(HISTORY_POINTS).fill(0), borderColor: '#1c6e54', backgroundColor: grad, borderWidth: 1.5, tension: 0.3, pointRadius: 0, fill: true },
+        { data: Array(HISTORY_POINTS).fill(0), borderColor: '#b3ac9d', borderWidth: 1, borderDash: [3,3], tension: 0.2, pointRadius: 0, fill: false, yAxisID: 'y1' },
       ],
     },
     options: {
       animation: { duration: 250 },
       maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, backgroundColor: 'rgba(15,22,34,0.95)', titleColor: '#fff', bodyColor: '#e8edf5', padding: 10, cornerRadius: 6, displayColors: false } },
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, backgroundColor: 'rgba(31,28,23,0.95)', titleColor: '#fbfaf7', bodyColor: '#d8d3c7', padding: 10, cornerRadius: 4, displayColors: false } },
       scales: {
         x: { display: false },
-        y: { position: 'left', grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#6a7585', font: { size: 11 } }, beginAtZero: true },
-        y1: { position: 'right', grid: { display: false }, ticks: { color: '#aab3bf', font: { size: 11 } }, beginAtZero: true },
+        y: { position: 'left', grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#807a6e', font: { size: 10 } }, beginAtZero: true },
+        y1: { position: 'right', grid: { display: false }, ticks: { color: '#b3ac9d', font: { size: 10 } }, beginAtZero: true },
       },
     },
   });
@@ -1050,17 +1111,17 @@ async function fetchSnapshot() {
     state.ws = data.active_workspace;
     state.peers = data.peers;
     renderToolbar(data.workspaces, data.active_workspace, data.workspace_meta || {});
-    renderSystem(data.system || {}, data.deriver_config || {}, data.queue || {});
     renderAdvisors((data.diagnostics || {}).advisors);
-    renderGraph(data.graph || {nodes: [], edges: []});
+    renderLead(data);
     renderAnatomy(data);
+    renderTimeline(data.sessions);
     renderDeriver(data.queue || {});
     renderSessions(data.sessions);
     renderPeers(data.peers);
     renderFeed(data.activity);
     renderMemoryState(data.memory_state || {});
     renderUsage(data.usage || {});
-    renderTotals(data.totals, data.queue);
+    renderSystem(data.system || {}, data.deriver_config || {});
 
     const total = data.totals.messages;
     const delta = state.prevTotals ? Math.max(0, total - state.prevTotals.messages) : 0;
@@ -1070,11 +1131,10 @@ async function fetchSnapshot() {
     $('msgs-total').textContent = formatNum(total);
 
     if (delta > 0 && state.prevTotals) {
-      log(`<b>+${delta}</b> new message${delta === 1 ? '' : 's'} in workspace <b>${data.active_workspace}</b>`);
+      log(`<b>+${delta}</b> new message${delta === 1 ? '' : 's'} in <b>${data.active_workspace}</b>`);
     }
     state.prevTotals = data.totals;
-    $('last-updated').textContent = 'updated ' + new Date().toLocaleTimeString();
-    $('polling-badge').textContent = `${(1000 / POLL_MS).toFixed(1)}Hz`;
+    $('last-updated').textContent = `Last updated · ${new Date().toLocaleTimeString()}`;
   } catch (err) {
     log('fetch failed: ' + err.message, 'err');
   }
@@ -1094,11 +1154,9 @@ async function triggerDream() {
     const u = j.status;
     const ok = (j.ok === true) || (typeof u === 'number' && u >= 200 && u < 300);
     if (ok) {
-      log(`<b>dream scheduled</b> · observer=<b>${escapeHtml(observer)}</b> · omni · queued (Honcho ${u})`, 'ok');
+      log(`<b>dream scheduled</b> · observer=<b>${escapeHtml(observer)}</b> · omni (Honcho ${u})`, 'ok');
     } else {
-      const what = typeof u === 'number' ? `upstream rejected ${u}` : 'proxy error';
-      const det = typeof j.resp === 'string' ? j.resp : (j.resp ? JSON.stringify(j.resp) : '');
-      log(`<b>dream failed</b> · ${what}` + (det ? ` · ${escapeHtml(det.slice(0,200))}` : ''), 'err');
+      log(`<b>dream failed</b> · upstream ${u}` + (j.resp ? ` · ${escapeHtml(String(j.resp).slice(0,200))}` : ''), 'err');
     }
   } catch (err) {
     log('dream error: ' + err.message, 'err');
@@ -1109,11 +1167,11 @@ async function triggerDream() {
 }
 
 // ---------- boot ------------------------------------------------------------
+setupHints();
 initChart();
 $('dream-btn').onclick = triggerDream;
 $('refresh-btn').onclick = fetchSnapshot;
 $('usage-reset').onclick = async () => { await fetch('/api/usage/reset', { method: 'POST' }); fetchSnapshot(); };
-$('graph-reset').onclick = () => fetchSnapshot();
 fetchSnapshot();
 log('dashboard online · proxying <b>http://127.0.0.1:8000</b>', 'ok');
 setInterval(fetchSnapshot, POLL_MS);
