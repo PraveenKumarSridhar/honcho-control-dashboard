@@ -6,611 +6,795 @@
 <title>Honcho Control</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-  /* ---------------------------------------------------------
-     Paper theme. Light only. Inter via system stack.
-     Hairline rules, generous whitespace, no shadows.
-  --------------------------------------------------------- */
-  :root {
-    --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
-                 "Inter", "Segoe UI", system-ui, sans-serif;
-    --font-serif: "SF Pro Text", -apple-system, system-ui, "Inter",
-                  "Segoe UI", sans-serif;
-    --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo,
-                 "Cascadia Code", Consolas, monospace;
+/* =========================================================
+   Honcho Control — dark paper theme
+   System fonts only. No shadows, no gradients, no glow.
+   Hairline 1px rules. One muted accent (sage-teal #7ba998).
+========================================================= */
 
-    /* Paper palette */
-    --paper:     #fbfaf7;          /* warm off-white */
-    --paper-2:   #f4f1eb;
-    --line:      #e2dfd6;
-    --line-soft: #ede9df;
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text",
+               "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
 
-    --ink:       #1f1c17;          /* warm near-black */
-    --ink-2:     #4d4840;
-    --ink-3:     #807a6e;
-    --ink-4:     #b3ac9d;
+  --bg:        #0d0f12;   /* near-black with cool tint */
+  --bg-2:      #11151a;   /* one step lighter, for raised surfaces */
+  --bg-3:      #161a21;   /* hover, border-equivalent */
+  --line:      #1c2129;   /* hairline rule */
+  --line-2:    #252b35;   /* stronger rule, dividers */
 
-    --accent:    #1c6e54;          /* deep teal — earthy */
-    --accent-2:  #2c4d77;          /* slate blue, for secondary */
-    --warn-bg:   #fff5db;
-    --bad:       #b04a3a;
-    --bad-bg:    #f7e3df;
-    --ok:        #2f6b4d;
-    --ok-bg:     #dfe9df;
-  }
+  --ink:       #d6dbe2;   /* primary text */
+  --ink-2:     #8e96a4;   /* secondary */
+  --ink-3:     #5c6473;   /* tertiary */
+  --ink-4:     #3d4452;   /* disabled / muted */
 
-  *, *::before, *::after { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; min-height: 100vh; }
-  body {
-    background: var(--paper);
-    color: var(--ink);
-    font-family: var(--font-serif);
-    font-size: 15px;
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-    text-rendering: optimizeLegibility;
-  }
-  .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
-  .mono { font-family: var(--font-mono); font-size: 0.92em; }
+  --accent:    #7ba998;   /* muted sage-teal — the only color */
+  --accent-2:  #9ec0b3;   /* lighter version */
+  --accent-bg: rgba(123,169,152,0.06);
 
-  .page { max-width: 760px; margin: 0 auto; padding: 56px 32px 120px; }
+  --warn:      #c69b6c;
+  --warn-bg:   #2a211a;
+  --ok:        #7ba998;
+  --ok-bg:     rgba(123,169,152,0.08);
+}
 
-  /* ---- Masthead ---- */
-  .masthead {
-    padding-bottom: 28px;
-    border-bottom: 1px solid var(--line);
-    margin-bottom: 36px;
-  }
-  .masthead h1 {
-    margin: 0 0 6px;
-    font-size: 32px;
-    font-weight: 500;
-    letter-spacing: -0.02em;
-    color: var(--ink);
-  }
-  .masthead .sub {
-    margin: 0;
-    font-size: 14px;
-    color: var(--ink-3);
-    letter-spacing: 0.02em;
-  }
-  .masthead .stamp {
-    margin-top: 14px;
-    font-size: 11.5px;
-    color: var(--ink-4);
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-  }
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; min-height: 100vh; }
 
-  /* ---- Workspace picker ---- */
-  .workspaces { margin-bottom: 32px; }
-  .ws-list { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
-  .pill {
-    appearance: none; border: none; background: transparent;
-    color: var(--ink-3); font: inherit; font-size: 14px;
-    padding: 4px 12px; border-radius: 2px; cursor: pointer;
-  }
-  .pill:hover { color: var(--ink-2); }
-  .pill.is-active {
-    color: var(--ink); background: var(--paper-2);
-    box-shadow: inset 0 -2px 0 var(--accent);
-    font-weight: 500;
-  }
-  .ws-desc {
-    color: var(--ink-2); font-size: 14px; line-height: 1.5;
-    padding: 6px 0;
-  }
-  .ws-desc strong { color: var(--ink); font-weight: 600; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14.5px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01", "cv11";
+}
 
-  /* ---- Advisors (yellow note) ---- */
-  .advisors { margin-bottom: 36px; }
-  .advisor {
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-    padding: 14px 0;
-    background: var(--warn-bg);
-    margin-top: -1px;
-  }
-  .advisor-title {
-    font-weight: 600; color: var(--ink);
-    margin-bottom: 4px; font-size: 14px;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .advisor-title::before {
-    content: "·"; color: var(--warn); font-weight: 700;
-  }
-  .advisor-body { color: var(--ink-2); font-size: 13.5px; line-height: 1.55; }
-  .advisor-body code { font-family: var(--font-mono); font-size: 0.9em; }
+.mono { font-family: var(--font-mono); font-size: 0.9em; }
+.num  { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
 
-  /* ---- Section: prose-first ---- */
-  section { margin-bottom: 48px; }
-  section h2 {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--ink-3);
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    margin: 0 0 18px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--line);
-    display: flex; align-items: center; gap: 8px;
-  }
+.page { max-width: 880px; margin: 0 auto; padding: 48px 28px 96px; }
 
-  /* ---- Prose summary (the lead paragraph) ---- */
-  .prose {
-    font-size: 16px;
-    line-height: 1.65;
-    color: var(--ink);
-  }
-  .prose em { color: var(--ink-2); font-style: italic; }
-  .prose strong { font-weight: 600; }
-  .prose .quiet { color: var(--ink-3); }
+/* ===== masthead ===== */
+.masthead {
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--line-2);
+  margin-bottom: 36px;
+}
+.masthead h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.masthead h1 .accent { color: var(--accent); font-weight: 500; }
+.masthead .sub {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.masthead .stamp {
+  margin-top: 16px;
+  font-size: 10.5px;
+  color: var(--ink-3);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.masthead .live-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 8px;
+  vertical-align: middle;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
 
-  /* ---- Stat strip (small inline numbers) ---- */
-  .stats {
-    display: flex; flex-wrap: wrap;
-    gap: 28px 32px;
-    margin: 14px 0 28px;
-  }
-  .stat-cell { display: flex; flex-direction: column; gap: 0; min-width: 0; }
-  .stat-label {
-    font-size: 11px;
-    color: var(--ink-3);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    font-weight: 500;
-  }
-  .stat-value {
-    font-size: 22px;
-    font-weight: 500;
-    color: var(--ink);
-    letter-spacing: -0.01em;
-    line-height: 1.15;
-  }
-  .stat-value .unit {
-    font-size: 12px;
-    color: var(--ink-3);
-    margin-left: 3px;
-    font-weight: 400;
-  }
-  .stat-sub { font-size: 12px; color: var(--ink-3); }
+/* ===== workspace picker ===== */
+.ws-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 6px;
+  flex-wrap: wrap; gap: 8px;
+}
+.ws-list { display: flex; gap: 0; flex-wrap: wrap; }
+.pill {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13.5px;
+  padding: 4px 12px 4px 0;
+  margin-right: 4px;
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+}
+.pill:hover { color: var(--ink); }
+.pill.is-active {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+  font-weight: 500;
+}
+.pill.is-active::after {
+  content: " ·";
+  color: var(--accent);
+}
+.ws-desc {
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin: 12px 0 36px;
+  padding: 10px 14px;
+  border-left: 1px solid var(--line-2);
+}
+.ws-desc strong { color: var(--ink); font-weight: 500; }
 
-  /* ---- Tooltip hint — click to pin, click outside to dismiss ---- */
-  .hint {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 14px; height: 14px;
-    border-radius: 50%;
-    border: 1px solid var(--ink-4);
-    color: var(--ink-3);
-    font-size: 9.5px; font-weight: 600;
-    cursor: pointer; user-select: none;
-    margin-left: 5px;
-    transition: color 0.15s, border-color 0.15s;
-  }
-  .hint:hover, .hint:focus, .hint.is-open {
-    color: var(--accent); border-color: var(--accent); outline: none;
-  }
-  .hint[data-tip]::after {
-    content: attr(data-tip);
-    position: absolute;
-    transform: translateX(-50%);
-    width: max-content; max-width: 320px;
-    padding: 10px 14px;
-    background: var(--ink);
-    color: var(--paper);
-    font-size: 13px;
-    font-weight: 400; line-height: 1.55;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.12s ease;
-    z-index: 100;
-    text-align: left;
-    text-transform: none;
-    letter-spacing: 0;
-  }
-  .hint { position: relative; }
-  .hint::after { bottom: calc(100% + 8px); left: 50%; }
-  .hint:hover::after, .hint:focus::after, .hint.is-open::after { opacity: 1; }
+/* ===== advisor ===== */
+.advisors { margin-bottom: 32px; }
+.advisor {
+  border-top: 1px solid var(--line-2);
+  border-bottom: 1px solid var(--line-2);
+  padding: 14px 16px;
+  background: var(--warn-bg);
+  margin: -1px 0 0;
+}
+.advisor-title {
+  font-weight: 500;
+  color: var(--warn);
+  margin-bottom: 4px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+.advisor-body {
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.advisor-body code { font-family: var(--font-mono); font-size: 0.9em; color: var(--ink); background: rgba(255,255,255,0.05); padding: 1px 5px; border-radius: 2px; }
 
-  /* prevent tooltip from hanging on when cursor moves but mouseout didn't fire */
-  .hint.is-open::after { pointer-events: auto; }
+/* ===== section ===== */
+section { margin-bottom: 44px; }
+section h2 {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin: 0 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+section h2 .count {
+  font-weight: 400;
+  color: var(--ink-4);
+  margin-left: 4px;
+}
 
-  /* ---- Session list (paper-style rows) ---- */
-  .session-list { border-top: 1px solid var(--line); }
-  .session-list .empty {
-    padding: 28px 0;
-    color: var(--ink-3); font-style: italic;
-    border-bottom: 1px solid var(--line);
-  }
-  .session {
-    padding: 18px 0;
-    border-bottom: 1px solid var(--line);
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 4px 16px;
-  }
-  .session-name {
-    font-family: var(--font-mono);
-    font-size: 14px;
-    color: var(--ink);
-    margin-bottom: 4px;
-    letter-spacing: -0.01em;
-  }
-  .session-meta {
-    font-size: 12px;
-    color: var(--ink-3);
-    grid-column: 1 / 2;
-    display: flex; gap: 14px;
-    flex-wrap: wrap;
-    margin-bottom: 6px;
-  }
-  .session-meta span { display: inline-flex; align-items: center; gap: 4px; }
-  .session-meta .v { color: var(--ink-2); font-weight: 500; font-variant-numeric: tabular-nums; }
-  .session-summary {
-    grid-column: 1 / 2;
-    font-size: 14.5px;
-    color: var(--ink-2);
-    line-height: 1.55;
-    font-family: var(--font-serif);
-    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-  }
-  .session-summary.empty { color: var(--ink-3); font-style: italic; }
-  .session-aside {
-    grid-column: 2 / 3;
-    grid-row: 1 / 4;
-    text-align: right;
-    font-size: 12px;
-    color: var(--ink-3);
-    min-width: 90px;
-  }
-  .session-aside .ago { display: block; color: var(--ink-2); }
+/* ===== prose lead ===== */
+.lead {
+  font-size: 16.5px;
+  line-height: 1.65;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.lead em { color: var(--ink-2); font-style: italic; }
+.lead strong { font-weight: 500; color: var(--ink); }
 
-  /* ---- Peer list ---- */
-  .peer-list { border-top: 1px solid var(--line); }
-  .peer {
-    padding: 14px 0;
-    border-bottom: 1px solid var(--line);
-    display: flex; align-items: baseline; justify-content: space-between;
-    gap: 12px;
-  }
-  .peer-name { font-family: var(--font-mono); font-size: 13.5px; color: var(--ink); }
-  .peer-meta { font-size: 12px; color: var(--ink-3); }
-  .peer-meta .v { color: var(--ink-2); font-weight: 500; }
+/* ===== anatomy: 4 inline cells ===== */
+.anatomy {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--line-2);
+  border-bottom: 1px solid var(--line-2);
+}
+.anatomy-cell {
+  padding: 14px 16px;
+  border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.anatomy-cell:last-child { border-right: none; }
+.anatomy-cell .label {
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.anatomy-cell .value {
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.anatomy-cell .value.zero { color: var(--ink-4); }
 
-  /* ---- Memory anatomy: 4 small cards in a row ---- */
-  .anatomy {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0;
-    border: 1px solid var(--line);
-    border-radius: 2px;
-  }
-  .anatomy-cell {
-    padding: 14px 16px;
-    border-right: 1px solid var(--line);
-    text-align: center;
-  }
-  .anatomy-cell:last-child { border-right: none; }
-  .anatomy-cell .icon { font-size: 18px; margin-bottom: 6px; opacity: 0.7; }
-  .anatomy-cell .name {
-    font-size: 11px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-3);
-    font-weight: 600;
-  }
-  .anatomy-cell .val {
-    font-size: 18px;
-    color: var(--ink);
-    margin-top: 4px;
-    font-weight: 500;
-    letter-spacing: -0.01em;
-    font-variant-numeric: tabular-nums;
-  }
+/* ===== timeline ===== */
+.timeline {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 16px 0;
+  position: relative;
+}
+.timeline-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 10px;
+}
+.timeline-bar {
+  position: relative;
+  height: 28px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+}
+.timeline-tick {
+  position: absolute;
+  top: 4px; bottom: 4px;
+  background: var(--accent);
+  border-radius: 1px;
+  min-width: 2px;
+}
+.timeline-tick.stale { background: var(--ink-3); }
+.timeline-tick.cold  { background: var(--ink-4); }
+.timeline-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.timeline-legend {
+  display: flex; gap: 16px;
+}
+.timeline-legend-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 1px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
 
-  /* ---- Deriver inline ---- */
-  .deriver {
-    border: 1px solid var(--line);
-    border-radius: 2px;
-    padding: 18px 22px;
-    background: var(--paper-2);
-  }
-  .deriver .label {
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink-3);
-    font-weight: 600;
-    margin-bottom: 10px;
-  }
-  .deriver-progress-label {
-    font-size: 14px;
-    color: var(--ink-2);
-    margin-bottom: 8px;
-  }
-  .progress {
-    height: 2px;
-    background: var(--line);
-    border-radius: 1px;
-    overflow: hidden;
-    margin-bottom: 8px;
-  }
-  .progress > span {
-    display: block;
-    height: 100%;
-    background: var(--accent);
-    border-radius: inherit;
-    transition: width 0.5s cubic-bezier(0.2,0,0.2,1);
-  }
-  .progress-meta {
-    display: flex; justify-content: space-between;
-    font-size: 12px; color: var(--ink-3);
-    margin-bottom: 14px;
-  }
-  .actions { display: flex; gap: 14px; flex-wrap: wrap; }
-  .btn {
-    appearance: none; border: 1px solid var(--ink);
-    background: transparent; color: var(--ink);
-    font: inherit; font-size: 13px; letter-spacing: 0.04em;
-    padding: 6px 14px; border-radius: 2px; cursor: pointer;
-    transition: background 0.12s, color 0.12s;
-  }
-  .btn:hover { background: var(--ink); color: var(--paper); }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--paper); }
-  .btn.primary:hover { background: var(--ink); border-color: var(--ink); }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+/* ===== deriver ===== */
+.deriver {
+  border: 1px solid var(--line-2);
+  padding: 18px 22px;
+}
+.deriver-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 14px;
+}
+.deriver-head .label {
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.deriver-progress-label {
+  font-size: 13.5px;
+  color: var(--ink);
+  margin-bottom: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.progress {
+  height: 2px;
+  background: var(--bg-3);
+  border-radius: 1px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.progress > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+  transition: width 0.5s cubic-bezier(0.2,0,0.2,1);
+}
+.progress-meta {
+  display: flex; justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin-bottom: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.actions { display: flex; gap: 14px; flex-wrap: wrap; }
+.btn {
+  appearance: none;
+  border: 1px solid var(--ink-3);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  padding: 6px 16px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.btn:hover { border-color: var(--ink); background: var(--bg-2); }
+.btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 500; }
+.btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  /* Status badge */
-  .status-pill {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 11.5px; padding: 2px 8px;
-    border-radius: 999px;
-    border: 1px solid var(--line);
-    color: var(--ink-2);
-    font-weight: 500;
-    background: var(--paper);
-  }
-  .status-pill.busy { color: var(--accent); border-color: var(--accent); }
-  .status-pill.idle { color: var(--ink-3); }
-  .pulse { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-  .pulse.live { animation: pulse 1.6s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
+/* status pill */
+.status-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 2px;
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  background: var(--bg);
+}
+.status-pill.busy { color: var(--accent); border-color: var(--accent); }
+.status-pill .pulse { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.status-pill.busy .pulse { animation: pulse 1.6s ease-in-out infinite; }
 
-  /* Chart wrapper */
-  .chart-wrap { height: 180px; position: relative; margin-top: 8px; }
-  .chart-stats {
-    display: flex; gap: 24px;
-    margin-top: 8px;
-    font-size: 12.5px; color: var(--ink-3);
-  }
-  .chart-stats > div { display: flex; align-items: baseline; gap: 6px; }
-  .chart-stats .v { color: var(--ink); font-weight: 500; }
-  .chart-stats .v.accent { color: var(--accent); }
+/* event log */
+.log {
+  margin-top: 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  max-height: 140px;
+  overflow-y: auto;
+  color: var(--ink-2);
+}
+.log-row { padding: 2px 0; line-height: 1.45; }
+.log-row .ts { color: var(--ink-4); margin-right: 8px; }
+.log-row.ok { color: var(--accent); }
+.log-row.err { color: var(--warn); }
+.log-row b { color: var(--accent); font-weight: 600; }
 
-  /* Recent messages — prose style */
-  .feed { border-top: 1px solid var(--line); }
-  .feed-row {
-    padding: 14px 0;
-    border-bottom: 1px solid var(--line);
-  }
-  .feed-head {
-    display: flex; align-items: baseline; gap: 8px;
-    font-size: 12.5px; color: var(--ink-3);
-    margin-bottom: 6px;
-    flex-wrap: wrap;
-  }
-  .feed-head .peer { color: var(--ink); font-family: var(--font-mono); font-size: 12px; }
-  .feed-head .session { color: var(--ink-3); font-family: var(--font-mono); font-size: 11.5px; }
-  .feed-head .ago { margin-left: auto; color: var(--ink-3); }
-  .feed-body {
-    font-size: 14.5px;
-    color: var(--ink-2);
-    line-height: 1.55;
-    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
-  }
-  .feed-empty { padding: 24px 0; color: var(--ink-3); font-style: italic; }
+/* ===== chart ===== */
+.chart-wrap { height: 160px; position: relative; margin-top: 8px; }
+.chart-stats {
+  display: flex;
+  gap: 28px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--ink-3);
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.chart-stats > div { display: flex; align-items: baseline; gap: 6px; }
+.chart-stats .v { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+.chart-stats .v.accent { color: var(--accent); }
 
-  /* Memory State — table-style */
-  .mem-row {
-    display: flex; justify-content: space-between;
-    padding: 10px 0;
-    border-bottom: 1px dotted var(--line);
-    font-size: 14px;
-  }
-  .mem-row .k { color: var(--ink-2); }
-  .mem-row .v { font-variant-numeric: tabular-nums; color: var(--ink); }
-  .mem-row.total {
-    margin-top: 6px;
-    border-bottom: none;
-    border-top: 1px solid var(--ink);
-    padding-top: 14px;
-  }
-  .mem-row.total .k { color: var(--ink); font-weight: 600; }
-  .mem-row.total .v { color: var(--accent); font-weight: 500; font-size: 16px; }
-  .footnote {
-    font-size: 12.5px; color: var(--ink-3); line-height: 1.55;
-    margin-top: 12px;
-  }
-  .footnote em { color: var(--ink-2); font-style: normal; font-weight: 500; }
+/* ===== session list (paper rows) ===== */
+.row-list { border-top: 1px solid var(--line-2); }
+.row {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 16px;
+}
+.row:hover { background: var(--bg-2); }
+.row-name {
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.row-meta {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  grid-column: 1 / 2;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.row-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.row-meta .v { color: var(--ink-2); }
+.row-summary {
+  grid-column: 1 / 2;
+  font-size: 14px;
+  color: var(--ink-2);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.row-summary.empty { color: var(--ink-3); font-style: italic; }
+.row-aside {
+  grid-column: 2 / 3;
+  grid-row: 1 / 4;
+  text-align: right;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  min-width: 80px;
+  align-self: start;
+  padding-top: 1px;
+}
+.row-aside .ago { display: block; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.row-aside .freshness {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.row-aside .freshness.fresh { color: var(--accent); }
+.empty {
+  padding: 28px 0;
+  color: var(--ink-3);
+  font-style: italic;
+  border-bottom: 1px solid var(--line);
+}
 
-  /* Proxy usage table */
-  .ep-row {
-    display: grid;
-    grid-template-columns: 1fr auto auto auto;
-    gap: 12px;
-    align-items: baseline;
-    padding: 6px 0;
-    border-bottom: 1px dotted var(--line);
-    font-size: 12.5px;
-  }
-  .ep-row:last-child { border-bottom: none; }
-  .ep-row .ep-path { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); word-break: break-all; }
-  .ep-row .v { font-variant-numeric: tabular-nums; color: var(--ink); }
-  .ep-row .v.lat { color: var(--ink-3); }
-  .ep-row .v.err { color: var(--bad); }
-  .ep-row .v.zero { color: var(--ink-4); }
+/* ===== peer rows ===== */
+.peer-row {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px;
+}
+.peer-row .name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink);
+}
+.peer-row .name .meta-tag {
+  font-size: 11px;
+  color: var(--ink-4);
+  margin-left: 8px;
+}
+.peer-row .stats {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
 
-  .ep-label {
-    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
-    color: var(--ink-3); font-weight: 600;
-    display: grid; grid-template-columns: 1fr auto auto auto; gap: 12px;
-    padding: 0 0 4px;
-    border-bottom: 1px solid var(--line);
-    margin-bottom: 4px;
-  }
+/* ===== recent messages (prose) ===== */
+.feed-row {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.feed-head {
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.feed-head .peer { color: var(--ink); font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
+.feed-head .session { color: var(--ink-3); font-family: var(--font-mono); font-size: 11px; }
+.feed-head .ago { margin-left: auto; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.feed-head .freshness {
+  font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+.feed-head .freshness.fresh { color: var(--accent); }
+.feed-body {
+  font-size: 14px;
+  color: var(--ink-2);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 
-  /* Log */
-  .log {
-    margin-top: 14px;
-    background: var(--paper-2);
-    border: 1px solid var(--line);
-    border-radius: 2px;
-    padding: 10px 14px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    max-height: 150px;
-    overflow-y: auto;
-    color: var(--ink-2);
-  }
-  .log-row { padding: 2px 0; line-height: 1.45; }
-  .log-row .ts { color: var(--ink-4); margin-right: 8px; }
-  .log-row.ok { color: var(--ok); }
-  .log-row.err { color: var(--bad); }
-  .log-row b { color: var(--accent); font-weight: 600; }
+/* ===== memory state ===== */
+.mem-row {
+  display: flex; justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px dotted var(--line);
+  font-size: 13.5px;
+}
+.mem-row .k { color: var(--ink-2); }
+.mem-row .v { font-variant-numeric: tabular-nums; color: var(--ink); }
+.mem-row.total {
+  margin-top: 6px;
+  border-bottom: none;
+  border-top: 1px solid var(--ink-2);
+  padding-top: 14px;
+}
+.mem-row.total .k { color: var(--ink); font-weight: 500; }
+.mem-row.total .v { color: var(--accent); font-weight: 500; font-size: 16px; }
 
-  /* Footer */
-  .foot {
-    margin-top: 64px;
-    padding-top: 20px;
-    border-top: 1px solid var(--line);
-    font-size: 12px;
-    color: var(--ink-3);
-    display: flex; justify-content: space-between;
-    gap: 12px; flex-wrap: wrap;
-  }
-  .foot a { color: var(--ink-2); text-decoration: none; border-bottom: 1px dotted var(--ink-3); }
-  .foot code { font-family: var(--font-mono); background: var(--paper-2); padding: 1px 5px; border-radius: 2px; color: var(--ink-2); }
+/* ===== proxy usage endpoint table ===== */
+.ep-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 14px;
+  align-items: baseline;
+  padding: 7px 0;
+  border-bottom: 1px dotted var(--line);
+  font-size: 12.5px;
+}
+.ep-row:last-child { border-bottom: none; }
+.ep-row .ep-path { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-2); word-break: break-all; }
+.ep-row .v { font-variant-numeric: tabular-nums; color: var(--ink); }
+.ep-row .v.lat { color: var(--ink-3); }
+.ep-row .v.zero { color: var(--ink-4); }
+.ep-row .v.err { color: var(--warn); }
+.ep-label {
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 600;
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 14px;
+  padding: 0 0 6px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+}
 
-  /* Session timeline (the new hero element, replaces graph) */
-  .timeline {
-    margin-top: 12px;
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-    padding: 18px 0;
-  }
-  .timeline-bar {
-    position: relative;
-    height: 24px;
-    background: var(--paper-2);
-    border-radius: 1px;
-  }
-  .timeline-tick {
-    position: absolute; top: 0; bottom: 0;
-    background: var(--accent);
-    border-radius: 1px;
-    opacity: 0.85;
-    min-width: 2px;
-  }
-  .timeline-tick.late { background: var(--ink-3); }
-  .timeline-tick.cold { background: var(--ink-4); }
-  .timeline-row {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    margin-top: 10px;
-    font-size: 12.5px;
-    color: var(--ink-3);
-  }
-  .timeline-row .legend {
-    display: inline-flex; gap: 14px;
-  }
-  .timeline-legend-dot {
-    display: inline-block; width: 8px; height: 8px; border-radius: 1px;
-    margin-right: 4px; vertical-align: middle;
-  }
-  .timeline-legend-dot.fresh { background: var(--accent); }
-  .timeline-legend-dot.stale { background: var(--ink-3); }
-  .timeline-legend-dot.cold  { background: var(--ink-4); }
+.footnote {
+  font-size: 12px;
+  color: var(--ink-3);
+  line-height: 1.55;
+  margin-top: 12px;
+}
+.footnote em {
+  font-style: normal;
+  color: var(--ink-2);
+  font-weight: 500;
+}
 
-  /* Score line */
-  .line-data {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--ink-2);
-    padding-top: 6px;
-  }
-  .line-data .k { color: var(--ink-3); }
+/* ===== dream output panel ===== */
+.dream-output {
+  border: 1px solid var(--accent);
+  border-left-width: 3px;
+  padding: 16px 22px;
+  margin-top: 16px;
+  background: var(--accent-bg);
+  display: none;
+}
+.dream-output.has-results { display: block; }
+.dream-output-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 14px;
+}
+.dream-output-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--accent-2);
+  letter-spacing: 0.04em;
+}
+.dream-output-meta { font-size: 11.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.dream-output-close {
+  background: transparent;
+  border: none;
+  color: var(--ink-3);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+  line-height: 1;
+}
+.dream-output-close:hover { color: var(--ink); }
+.extraction-list {
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+}
+.extraction {
+  padding: 10px 0;
+  border-bottom: 1px dotted var(--line);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.extraction:last-child { border-bottom: none; }
+.extraction-content { color: var(--ink); }
+.extraction-meta {
+  display: flex;
+  gap: 14px;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+.extraction-meta .level { color: var(--accent); }
+.extraction-meta .level.deductive { color: var(--ink-2); font-style: italic; }
+
+/* dreaming pulse animation when in progress */
+.dreaming {
+  color: var(--accent);
+}
+.dreaming::after {
+  content: " ▎▎▎";
+  animation: dream-progress 1.4s steps(4) infinite;
+  letter-spacing: -3px;
+}
+@keyframes dream-progress {
+  0% { content: " ▎"; }
+  25% { content: " ▎▎"; }
+  50% { content: " ▎▎▎"; }
+  75% { content: " ▎▎"; }
+  100% { content: " ▎"; }
+}
+
+/* ===== tooltip (click-to-pin, click-out-dismiss) ===== */
+.hint {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  border: 1px solid var(--ink-4);
+  color: var(--ink-3);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  margin-left: 6px;
+  font-family: var(--font-sans);
+  transition: color 0.15s, border-color 0.15s;
+}
+.hint:hover, .hint:focus, .hint.is-open {
+  color: var(--accent);
+  border-color: var(--accent);
+  outline: none;
+}
+.hint { position: relative; }
+.hint::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 320px;
+  padding: 9px 12px;
+  background: var(--bg-3);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.55;
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  z-index: 100;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: normal;
+}
+.hint:hover::after, .hint:focus::after, .hint.is-open::after { opacity: 1; }
+.hint.is-open::after { pointer-events: auto; }
+
+/* ===== system footer ===== */
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px 36px;
+  margin-top: 12px;
+}
+.stat-cell { display: flex; flex-direction: column; gap: 2px; }
+.stat-label {
+  font-size: 10.5px;
+  color: var(--ink-3);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+.stat-value {
+  font-size: 13.5px;
+  color: var(--ink);
+  font-family: var(--font-mono);
+}
+.line-data {
+  margin-top: 14px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--ink-2);
+  padding-top: 10px;
+  border-top: 1px dotted var(--line);
+}
+.line-data .k { color: var(--ink-3); }
+
+/* ===== footer ===== */
+.foot {
+  margin-top: 56px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-2);
+  font-size: 12px;
+  color: var(--ink-3);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.foot a { color: var(--ink-2); text-decoration: none; border-bottom: 1px dotted var(--ink-3); }
+.foot code {
+  font-family: var(--font-mono);
+  background: var(--bg-2);
+  padding: 1px 6px;
+  border-radius: 2px;
+  color: var(--ink-2);
+}
 </style>
 </head>
 <body>
 <div class="page">
 
-  <!-- MASTHEAD -->
   <header class="masthead">
-    <h1>Honcho Control</h1>
-    <p class="sub">A live read of your Honcho memory: sessions, peers, conclusions, dreams in flight.</p>
-    <p class="stamp" id="last-updated">Last updated · —</p>
+    <h1>Honcho <span class="accent">Control</span></h1>
+    <p class="sub">A live read of your Honcho memory — sessions, peers, conclusions, dreams in flight.</p>
+    <p class="stamp"><span class="live-dot"></span> <span id="last-updated">Loading</span></p>
   </header>
 
-  <!-- WORKSPACE PICKER -->
-  <div class="workspaces">
+  <div class="ws-row">
     <div class="ws-list" id="toolbar"></div>
-    <p class="ws-desc" id="ws-desc"></p>
   </div>
+  <p class="ws-desc" id="ws-desc"></p>
 
-  <!-- ADVISORS / WARNINGS -->
   <div class="advisors" id="advisors"></div>
 
-  <!-- LEAD PROSE PARAGRAPH -->
-  <section id="lead">
-    <p class="prose" id="lead-prose">Loading…</p>
+  <section>
+    <p class="lead" id="lead-prose">Loading workspace…</p>
   </section>
 
-  <!-- MEMORY ANATOMY: 4 small cells, compact -->
   <section>
-    <h2>Anatomy
-      <span class="hint" tabindex="0"
-            data-tip="Honcho keeps four kinds of memory for you. The deriver works in the background and grows them automatically.">i</span>
-    </h2>
-    <div class="anatomy" id="anatomy">
-      <div class="anatomy-cell"><div class="icon">·</div><div class="name">Messages</div><div class="val num" id="an-messages">—</div></div>
-      <div class="anatomy-cell"><div class="icon">·</div><div class="name">Summaries</div><div class="val num" id="an-summaries">—</div></div>
-      <div class="anatomy-cell"><div class="icon">·</div><div class="name">Peer cards</div><div class="val num" id="an-cards">—</div></div>
-      <div class="anatomy-cell"><div class="icon">·</div><div class="name">Conclusions</div><div class="val num" id="an-conclusions">—</div></div>
+    <h2>Anatomy <span class="hint" tabindex="0"
+      data-tip="Four kinds of memory Honcho keeps for you. The deriver, summarizer, and dream workers grow these automatically.">i</span></h2>
+    <div class="anatomy">
+      <div class="anatomy-cell">
+        <span class="label">Messages</span>
+        <span class="value num" id="an-messages">—</span>
+      </div>
+      <div class="anatomy-cell">
+        <span class="label">Summaries</span>
+        <span class="value num zero" id="an-summaries">—</span>
+      </div>
+      <div class="anatomy-cell">
+        <span class="label">Peer cards</span>
+        <span class="value num zero" id="an-cards">—</span>
+      </div>
+      <div class="anatomy-cell">
+        <span class="label">Conclusions</span>
+        <span class="value num zero" id="an-conclusions">—</span>
+      </div>
     </div>
   </section>
 
-  <!-- SESSION TIMELINE (replaces sparse graph) -->
   <section>
-    <h2>When did each session last speak
-      <span class="hint" tabindex="0"
-            data-tip="Each session plotted on a recency timeline. Sessions close together are recent; gaps mean quiet periods. Colored by freshness.">i</span>
-    </h2>
+    <h2>When each session last spoke</h2>
     <div class="timeline">
-      <div class="timeline-bar" id="timeline-bar">
-        <span style="position:absolute;left:0;top:0;bottom:0;color:var(--ink-4);font-size:11px;padding:4px 0 0 6px">older</span>
-        <span style="position:absolute;right:0;top:0;bottom:0;color:var(--ink-4);font-size:11px;padding:4px 6px 0 0">today</span>
+      <div class="timeline-label">
+        <span>older</span>
+        <span>today</span>
       </div>
-      <div class="timeline-row">
-        <span class="legend">
-          <span><span class="timeline-legend-dot fresh"></span>fresh (&lt;1h)</span>
-          <span><span class="timeline-legend-dot stale"></span>stale (&lt;3d)</span>
-          <span><span class="timeline-legend-dot cold"></span>cold</span>
+      <div class="timeline-bar" id="timeline-bar"></div>
+      <div class="timeline-meta">
+        <span class="timeline-legend">
+          <span><span class="timeline-legend-dot" style="background:var(--accent)"></span>fresh (&lt;1h)</span>
+          <span><span class="timeline-legend-dot" style="background:var(--ink-3)"></span>stale (&lt;3d)</span>
+          <span><span class="timeline-legend-dot" style="background:var(--ink-4)"></span>cold</span>
         </span>
         <span id="timeline-note"></span>
       </div>
     </div>
   </section>
 
-  <!-- DERIVER -->
   <section>
-    <h2>The deriver
-      <span class="hint" tabindex="0"
-            data-tip="Honcho's deriver is a background worker. The queue tracks pending, in-progress, and completed work units. 'Run dream now' schedules an `omni` consolidation.">i</span>
-    </h2>
+    <h2>Deriver</h2>
     <div class="deriver">
-      <div class="label">Queue
-        <span id="deriver-status-host" style="margin-left:10px"></span>
+      <div class="deriver-head">
+        <span class="label">Queue</span>
+        <span id="deriver-status-host"></span>
       </div>
       <div id="deriver-progress-label" class="deriver-progress-label">—</div>
       <div class="progress"><span id="deriver-bar" style="width:0%"></span></div>
@@ -619,76 +803,62 @@
         <span id="deriver-total">—</span>
       </div>
       <div class="actions">
-        <button class="btn primary" id="dream-btn">Run dream now</button>
+        <button class="btn primary" id="dream-btn">Run dream</button>
         <button class="btn" id="refresh-btn">Refresh</button>
+      </div>
+      <div class="dream-output" id="dream-output">
+        <div class="dream-output-head">
+          <div>
+            <div class="dream-output-title" id="dream-output-title">Dream completed</div>
+            <div class="dream-output-meta" id="dream-output-meta"></div>
+          </div>
+          <button class="dream-output-close" id="dream-output-close" title="Dismiss">×</button>
+        </div>
+        <div class="extraction-list" id="extraction-list"></div>
       </div>
       <div class="log" id="log"></div>
     </div>
   </section>
 
-  <!-- MESSAGE ACTIVITY -->
   <section>
-    <h2>Message activity · last 2 minutes
-      <span class="hint" tabindex="0"
-            data-tip="Total message count across all sessions in this workspace. The dashed line shows per-tick delta. Polling cadence is 2.5s.">i</span>
-    </h2>
+    <h2>Message activity <span style="font-weight:400;color:var(--ink-3);text-transform:none;letter-spacing:normal">· last two minutes</span></h2>
     <div class="chart-wrap"><canvas id="msgChart"></canvas></div>
     <div class="chart-stats">
       <div>now <span class="v num accent" id="msgs-now">0</span></div>
-      <div>1m Δ <span class="v num" id="msgs-delta">+0</span></div>
+      <div>1m delta <span class="v num" id="msgs-delta">+0</span></div>
       <div>total <span class="v num" id="msgs-total">0</span></div>
     </div>
   </section>
 
-  <!-- SESSIONS -->
   <section>
-    <h2>Sessions
-      <span class="hint" tabindex="0"
-            data-tip="A session is one conversation thread between two peers. Each user/agent pair gets its own session automatically.">i</span>
-      <span style="margin-left:auto;font-size:11px;color:var(--ink-3);font-weight:400" id="sessions-count">0</span>
-    </h2>
-    <div class="session-list" id="sessions"></div>
+    <h2>Sessions <span class="count" id="sessions-count"></span></h2>
+    <div class="row-list" id="sessions"></div>
   </section>
 
-  <!-- PEERS -->
   <section>
-    <h2>Peers
-      <span class="hint" tabindex="0"
-            data-tip="A peer is one participant in any conversation — you, the assistant, or an external user. Each accumulates its own card and its own conclusions over time.">i</span>
-      <span style="margin-left:auto;font-size:11px;color:var(--ink-3);font-weight:400" id="peers-count">0</span>
-    </h2>
-    <div class="peer-list" id="peers"></div>
+    <h2>Peers <span class="count" id="peers-count"></span></h2>
+    <div class="row-list" id="peers"></div>
   </section>
 
-  <!-- RECENT MESSAGES -->
   <section>
-    <h2>Recent messages
-      <span class="hint" tabindex="0"
-            data-tip="The most recent message from each session, ordered by recency. Quoted in context — what was said, who said it, when.">i</span>
-    </h2>
-    <div class="feed" id="feed"></div>
+    <h2>Recent messages <span class="hint" tabindex="0"
+      data-tip="The most recent message from each session, ordered by recency. Quoted in context — what was said, who said it, when.">i</span></h2>
+    <div id="feed"></div>
   </section>
 
-  <!-- MEMORY STATE -->
   <section>
-    <h2>Memory state
-      <span class="hint" tabindex="0"
-            data-tip="Honcho's API has no token field; this is character count divided by four, a rough rule of thumb for English text. For real numbers, instrument the LLM provider directly.">i</span>
-    </h2>
+    <h2>Memory state <span class="hint" tabindex="0"
+      data-tip="Honcho's API has no token field; this is character count divided by four — a rough rule of thumb for English text.">i</span></h2>
     <div id="memory-state"></div>
   </section>
 
-  <!-- PROXY USAGE -->
   <section>
-    <h2>Proxy usage · last 60 s
-      <span class="hint" tabindex="0"
-            data-tip="Volume and latency of calls this dashboard makes to Honcho, on the rolling minute. These are dashboard outbound calls, not Honcho's internal LLM costs — those aren't exposed.">i</span>
+    <h2>Proxy usage <span style="font-weight:400;color:var(--ink-3);text-transform:none;letter-spacing:normal">· last 60s</span>
       <button class="btn" id="usage-reset" style="margin-left:auto;font-size:11px;padding:3px 10px">Reset</button>
     </h2>
     <div id="usage"></div>
   </section>
 
-  <!-- SYSTEM FOOTER -->
   <section>
     <h2>System</h2>
     <div class="stats" id="system"></div>
@@ -697,30 +867,46 @@
 
   <footer class="foot">
     <div>Source on <a href="https://github.com/PraveenKumarSridhar/honcho-control-dashboard" target="_blank" rel="noreferrer">github.com/PraveenKumarSridhar/honcho-control-dashboard</a></div>
-    <div>Served on <code id="sys-pin">127.0.0.1:7777</code></div>
+    <div>Serving <code id="sys-pin">127.0.0.1:7777</code></div>
   </footer>
 
 </div>
 
 <script>
-// ---------------------------------------------------------------------------
+/* =========================================================
+   Honcho Control — front-end
+   Polls /api/snapshot every 2.5s.
+   Click ⓘ to pin a tooltip; click outside to dismiss.
+========================================================= */
+
 const POLL_MS = 2500;
 const HISTORY_POINTS = 48;
 
-const state = { ws: null, prevTotals: null, peers: [], openHint: null };
+const state = {
+  ws: null,
+  prevTotals: null,
+  prevConclusionsTotal: 0,
+  peers: [],
+  openHint: null,
+  dreamStartedAt: null,
+  dreamInFlight: false,
+};
 
 const $ = (id) => document.getElementById(id);
 
 function escapeHtml(s) {
-  return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  return (s ?? '').toString()
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 function formatNum(n) {
-  if (n === null || n === undefined) return '—';
+  if (n === null || n === undefined || n === 0) return '0';
   return Number(n).toLocaleString();
 }
-
-// Pretty timestamp parsing for ISO + Honcho ULIDs (base32 of 48 bits)
-function parseHonchoTs(ts) {
+function strip(name) {
+  return (name || '').toString().replace(/^user-default-/, '').replace(/^human-/i, '');
+}
+function parseTs(ts) {
   if (!ts) return null;
   if (ts.length > 20 && ts.includes('-')) {
     const d = new Date(ts).getTime();
@@ -738,9 +924,11 @@ function parseHonchoTs(ts) {
   } catch (_) { return null; }
 }
 function relativeTime(ts) {
-  const d = parseHonchoTs(ts);
-  if (!d) return ts ? (ts.slice(0,8) + '…') : '—';
-  const diff = Date.now() - d, abs = Math.abs(diff), future = diff < 0;
+  const d = parseTs(ts);
+  if (!d) return ts ? (ts.slice(0, 8) + '\u2026') : '\u2014';
+  const diff = Date.now() - d;
+  const abs = Math.abs(diff);
+  const future = diff < 0;
   if (abs < 60_000) return future ? 'in moments' : 'just now';
   const m = Math.round(abs / 60_000);
   if (m < 60) return future ? `in ${m}m` : `${m}m ago`;
@@ -751,25 +939,25 @@ function relativeTime(ts) {
   return new Date(d).toLocaleDateString();
 }
 function freshness(ts) {
-  const d = parseHonchoTs(ts);
+  const d = parseTs(ts);
   if (!d) return 'cold';
-  const hours = (Date.now() - d) / 3_600_000;
-  if (hours < 1) return 'fresh';
-  if (hours < 24 * 3) return 'stale';
+  const h = (Date.now() - d) / 3_600_000;
+  if (h < 1) return 'fresh';
+  if (h < 24 * 3) return 'stale';
   return 'cold';
 }
 
-// ---------- log -------------------------------------------------------------
+// ---------- log ----------
 function log(msg, level = '') {
   const box = $('log');
   const row = document.createElement('div');
   row.className = 'log-row ' + level;
   row.innerHTML = `<span class="ts">${new Date().toLocaleTimeString()}</span>${msg}`;
   box.prepend(row);
-  while (box.children.length > 80) box.removeChild(box.lastChild);
+  while (box.children.length > 60) box.removeChild(box.lastChild);
 }
 
-// ---------- tooltips (click to pin, click-out to dismiss) ------------------
+// ---------- tooltips: click to pin, click out to dismiss ----------
 function setupHints() {
   document.querySelectorAll('.hint').forEach(h => {
     h.addEventListener('click', (e) => {
@@ -789,7 +977,7 @@ function setupHints() {
   });
 }
 
-// ---------- workspace pills -----------------------------------------------
+// ---------- workspace pills ----------
 function renderToolbar(workspaces, active, meta) {
   const tb = $('toolbar');
   tb.innerHTML = '';
@@ -797,7 +985,6 @@ function renderToolbar(workspaces, active, meta) {
     const b = document.createElement('button');
     b.className = 'pill' + (w.id === active ? ' is-active' : '');
     b.textContent = w.id;
-    b.setAttribute('aria-pressed', w.id === active ? 'true' : 'false');
     b.onclick = () => { state.ws = w.id; fetchSnapshot(); };
     tb.appendChild(b);
   });
@@ -807,31 +994,31 @@ function renderToolbar(workspaces, active, meta) {
     : '';
 }
 
-// ---------- lead prose -----------------------------------------------------
+// ---------- lead prose ----------
 function renderLead(data) {
   const peerCount = data.peers.length;
   const sessCount = data.sessions.length;
   const msgCount = data.totals.messages;
   const concl = data.totals.conclusions_total;
-  const mostRecent = data.sessions[0]; // already sorted by recency
-  const ago = mostRecent ? relativeTime(mostRecent.last_ts) : 'never';
-
+  const last = data.sessions[0];
   let text;
   if (sessCount === 0) {
-    text = `The <strong>${escapeHtml(data.active_workspace)}</strong> workspace has no sessions yet. Start a conversation with the agent and a session will appear here within a few seconds.`;
+    text = `The <strong>${escapeHtml(data.active_workspace)}</strong> workspace has no sessions yet. Start a conversation with the agent and one will appear here within a few seconds.`;
   } else {
-    text = `In the <strong>${escapeHtml(data.active_workspace)}</strong> workspace, Honcho is tracking <strong>${sessCount}</strong> conversation${sessCount === 1 ? '' : 's'} across <strong>${peerCount}</strong> peer${peerCount === 1 ? '' : 's'}, with <strong>${msgCount.toLocaleString()}</strong> message${msgCount === 1 ? '' : 's'} stored. `;
+    text = `The <strong>${escapeHtml(data.active_workspace)}</strong> workspace currently holds <strong>${sessCount}</strong> conversation${sessCount === 1 ? '' : 's'} across <strong>${peerCount}</strong> peer${peerCount === 1 ? '' : 's'}, with <strong>${formatNum(msgCount)}</strong> message${msgCount === 1 ? '' : 's'} stored. `;
     if (concl === 0) {
-      text += `The deriver hasn't yet extracted any atomic conclusions — see the advisor below if that's surprising. `;
+      text += `The deriver hasn't yet extracted any atomic conclusions \u2014 see the advisor below if that's surprising.`;
     } else {
-      text += `<strong>${concl}</strong> conclusion${concl === 1 ? '' : 's'} extracted so far. `;
+      text += `<strong>${formatNum(concl)}</strong> conclusion${concl === 1 ? '' : 's'} extracted so far.`;
     }
-    text += `Most recent activity: <strong>${escapeHtml(mostRecent.id)}</strong>, ${ago}.`;
+    if (last) {
+      text += ` Most recent activity was in <strong>${escapeHtml(last.id)}</strong>, ${relativeTime(last.last_ts)}.`;
+    }
   }
   $('lead-prose').innerHTML = text;
 }
 
-// ---------- advisors -------------------------------------------------------
+// ---------- advisors ----------
 function renderAdvisors(advisors) {
   const host = $('advisors');
   if (!advisors || !advisors.length) { host.innerHTML = ''; return; }
@@ -842,7 +1029,7 @@ function renderAdvisors(advisors) {
     </div>`).join('');
 }
 
-// ---------- anatomy --------------------------------------------------------
+// ---------- anatomy ----------
 function renderAnatomy(data) {
   const sess = data.sessions || [];
   const msgs = data.totals?.messages || 0;
@@ -853,49 +1040,49 @@ function renderAnatomy(data) {
   $('an-summaries').textContent = sumChars > 0 ? formatNum(sumChars) : '0';
   $('an-cards').textContent     = cardChars > 0 ? formatNum(cardChars) : '0';
   $('an-conclusions').textContent = formatNum(concl);
+  // dim zero values
+  ['an-summaries','an-cards','an-conclusions'].forEach(id => {
+    const v = $(id);
+    v.classList.toggle('zero', v.textContent === '0');
+  });
 }
 
-// ---------- session timeline (replaces graph) -----------------------------
+// ---------- session timeline ----------
 function renderTimeline(sessions) {
   const bar = $('timeline-bar');
-  // Strip existing ticks but keep the "older/today" labels
-  bar.querySelectorAll('.timeline-tick, .tick-label').forEach(n => n.remove());
-
+  bar.innerHTML = '';
   if (!sessions.length) {
     $('timeline-note').textContent = 'no sessions yet';
     return;
   }
-
-  // Find newest and oldest recency (in ms)
-  const dates = sessions.map(s => parseHonchoTs(s.last_ts)).filter(Boolean);
+  const dates = sessions.map(s => parseTs(s.last_ts)).filter(Boolean);
   if (!dates.length) return;
   const max = Math.max(...dates);
   const min = Math.min(...dates);
   const range = Math.max(1, max - min);
 
-  // Each tick: width proportional to message count, x = how recent (rightmost = now)
   sessions.forEach(s => {
-    const d = parseHonchoTs(s.last_ts);
+    const d = parseTs(s.last_ts);
     if (!d) return;
     const xPct = ((d - min) / range) * 100;
-    const w = Math.max(2, Math.min(8, Math.sqrt(s.message_count || 1) * 1.3));
+    const w = Math.max(2, Math.min(10, Math.sqrt(s.message_count || 1) * 1.3));
     const f = freshness(s.last_ts);
-    const cls = `timeline-tick ${f === 'fresh' ? '' : (f === 'stale' ? 'late' : 'cold')}`;
+    const cls = `timeline-tick ${f === 'fresh' ? '' : (f === 'stale' ? 'stale' : 'cold')}`;
     const t = document.createElement('div');
     t.className = cls;
     t.style.left = `calc(${xPct}% - ${w/2}px)`;
     t.style.width = `${w}px`;
-    t.title = `${s.id}\n${relativeTime(s.last_ts)}\n${s.message_count} msgs`;
+    t.title = `${s.id}\n${relativeTime(s.last_ts)}\n${s.message_count} messages`;
     bar.appendChild(t);
   });
 
-  const freshCount = sessions.filter(s => freshness(s.last_ts) === 'fresh').length;
+  const fresh = sessions.filter(s => freshness(s.last_ts) === 'fresh').length;
+  const oldest = sessions[sessions.length - 1];
   $('timeline-note').textContent =
-    `${sessions.length} session${sessions.length === 1 ? '' : 's'} · ` +
-    `${freshCount} fresh · oldest ${relativeTime(sessions[sessions.length-1].last_ts)}`;
+    `${sessions.length} session${sessions.length === 1 ? '' : 's'} \u00b7 ${fresh} fresh \u00b7 oldest ${relativeTime(oldest.last_ts)}`;
 }
 
-// ---------- deriver --------------------------------------------------------
+// ---------- deriver ----------
 function renderDeriver(q) {
   const total = q.total_work_units || 0;
   const done = q.completed_work_units || 0;
@@ -904,40 +1091,42 @@ function renderDeriver(q) {
   const pct = total > 0 ? Math.round(done / total * 100) : 0;
   $('deriver-bar').style.width = pct + '%';
   $('deriver-progress-label').textContent =
-    total === 0 ? 'No work scheduled yet. Trigger one to start.'
-                : `${done} of ${total} work units completed · ${pct}%`;
-  $('deriver-pending').textContent = `${pending} pending · ${inprog} in progress`;
+    total === 0 ? 'No work scheduled. Trigger one to start.'
+                : `${done} of ${total} work units completed \u00b7 ${pct}%`;
+  $('deriver-pending').textContent = `${pending} pending \u00b7 ${inprog} in progress`;
   $('deriver-total').textContent = total > 0 ? `${total} total` : 'awaiting input';
   const busy = pending > 0 || inprog > 0;
   $('deriver-status-host').innerHTML =
-    `<span class="status-pill ${busy?'busy':'idle'}">
-       <span class="pulse ${busy?'live':''}"></span>${busy ? 'processing' : (total > 0 ? 'completed' : 'idle')}
+    `<span class="status-pill ${busy?'busy':''}">
+       <span class="pulse"></span>${busy ? 'processing' : (total > 0 ? 'completed' : 'idle')}
      </span>`;
 }
 
-// ---------- sessions / peers / feed ---------------------------------------
+// ---------- sessions / peers / feed ----------
 function renderSessions(sessions) {
   const host = $('sessions');
-  $('sessions-count').textContent = `${sessions.length} session${sessions.length === 1 ? '' : 's'}`;
+  $('sessions-count').textContent = `\u00b7 ${sessions.length}`;
   if (!sessions.length) {
     host.innerHTML = '<div class="empty">No sessions yet. Start a conversation to create one.</div>';
     return;
   }
   host.innerHTML = sessions.map(s => {
     const summary = s.short_summary
-      ? `<div class="session-summary">${escapeHtml(s.short_summary)}</div>`
-      : `<div class="session-summary empty">No summary yet — the deriver needs more messages, or it's blocked upstream.</div>`;
-    const lastPeer = s.last_peer ? s.last_peer.replace(/^user-default-/, '') : '—';
-    return `<div class="session">
-      <div class="session-name">${escapeHtml(s.id)}</div>
-      <div class="session-meta">
-        <span><span class="v num">${formatNum(s.message_count)}</span> messages</span>
-        <span><span class="v num">${formatNum(s.message_chars)}</span> characters</span>
+      ? `<div class="row-summary">${escapeHtml(s.short_summary)}</div>`
+      : `<div class="row-summary empty">No summary yet.</div>`;
+    const f = freshness(s.last_ts);
+    const lastPeer = s.last_peer ? strip(s.last_peer) : '\u2014';
+    return `<div class="row">
+      <div class="row-name">${escapeHtml(s.id)}</div>
+      <div class="row-meta">
+        <span><span class="num">${formatNum(s.message_count)}</span> messages</span>
+        <span><span class="num">${formatNum(s.message_chars)}</span> chars</span>
         <span>last by <span class="mono">${escapeHtml(lastPeer)}</span></span>
       </div>
       ${summary}
-      <div class="session-aside">
+      <div class="row-aside">
         <span class="ago">${relativeTime(s.last_ts)}</span>
+        <span class="freshness ${f}">${f}</span>
       </div>
     </div>`;
   }).join('');
@@ -945,51 +1134,48 @@ function renderSessions(sessions) {
 
 function renderPeers(peers) {
   const host = $('peers');
-  $('peers-count').textContent = `${peers.length} peer${peers.length === 1 ? '' : 's'}`;
+  $('peers-count').textContent = `\u00b7 ${peers.length}`;
   if (!peers.length) {
     host.innerHTML = '<div class="empty">No peers yet.</div>';
     return;
   }
   host.innerHTML = peers.map(p => {
-    const name = p.id.replace(/^user-default-/, '');
-    return `<div class="peer">
+    const name = strip(p.id);
+    const meta = p.has_card
+      ? `<span class="stats"><span class="num">${formatNum(p.card_size)}</span> char card \u00b7 <span class="num">${formatNum(p.conclusions)}</span> conclusions</span>`
+      : `<span class="stats">no card \u00b7 <span class="num">${formatNum(p.conclusions)}</span> conclusions</span>`;
+    return `<div class="peer-row">
       <div>
-        <span class="peer-name">${escapeHtml(name)}</span>
-        ${p.has_card ? '' : ' <span style="color:var(--ink-4);font-size:11px">· no card yet</span>'}
+        <span class="name">${escapeHtml(name)}</span>${p.has_card ? '' : ' <span class="meta-tag">\u00b7 no card</span>'}
       </div>
-      <div class="peer-meta">
-        <span class="v num">${formatNum(p.conclusions)}</span> conclusions
-        ${p.has_card ? ` · <span class="v num">${formatNum(p.card_size)}</span>c card` : ''}
-      </div>
+      ${meta}
     </div>`;
   }).join('');
 }
 
 function renderFeed(feed) {
   const host = $('feed');
-  if (!feed.length) {
-    host.innerHTML = '<div class="feed-empty">No messages yet.</div>';
-    return;
-  }
+  if (!feed.length) { host.innerHTML = '<div class="empty">No messages yet.</div>'; return; }
   host.innerHTML = feed.map(f => `
     <div class="feed-row">
       <div class="feed-head">
-        <span class="peer">${escapeHtml((f.peer || '?').replace(/^user-default-/, ''))}</span>
-        <span>said in</span>
+        <span class="peer">${escapeHtml(strip(f.peer || '?'))}</span>
+        <span style="color:var(--ink-4)">said in</span>
         <span class="session">${escapeHtml(f.session)}</span>
         <span class="ago">${relativeTime(f.ts)}</span>
+        <span class="freshness ${freshness(f.ts)}">${freshness(f.ts)}</span>
       </div>
       <div class="feed-body">${escapeHtml(f.preview)}</div>
     </div>`).join('');
 }
 
-// ---------- memory state ---------------------------------------------------
+// ---------- memory state ----------
 function renderMemoryState(ms) {
   const host = $('memory-state');
   if (!ms) { host.innerHTML = '<div class="footnote">No data.</div>'; return; }
   const allZero = !ms.message_chars && !ms.short_summary_chars && !ms.long_summary_chars && !ms.peer_card_chars && !ms.conclusion_chars;
   if (allZero) {
-    host.innerHTML = '<div class="footnote"><em>Empty.</em> This workspace has no message, summary, card, or conclusion content yet.</div>';
+    host.innerHTML = '<div class="footnote">Empty. This workspace has no message, summary, card, or conclusion content yet.</div>';
     return;
   }
   const rows = [
@@ -1008,25 +1194,24 @@ function renderMemoryState(ms) {
       <span class="k">Approximate total</span>
       <span class="v">~${formatNum(ms.approx_tokens_surrogate)} tokens</span>
     </div>
-    <div class="footnote"><em>Surrogate, not exact.</em> Honcho's API has no token field; characters ÷ 4 is a rough rule of thumb for English text. For real numbers, instrument the LLM provider directly.</div>`;
+    <div class="footnote"><em>Surrogate, not exact.</em> Honcho's API exposes no token field. Characters divided by four is a rough rule of thumb for English text.</div>`;
 }
 
-// ---------- proxy usage ----------------------------------------------------
+// ---------- proxy usage ----------
 function renderUsage(u) {
   const host = $('usage');
   if (!u) { host.innerHTML = '<div class="footnote">No data yet.</div>'; return; }
   const base = [
-    [`calls (last ${u.window_seconds}s)`, formatNum(u.calls_in_window)],
-    ['calls/sec (rolling)', u.calls_per_sec_avg.toFixed(3)],
+    [`calls in last ${u.window_seconds}s`, formatNum(u.calls_in_window)],
+    ['calls per second (rolling)', u.calls_per_sec_avg.toFixed(3)],
     ['total recorded', formatNum(u.total_calls_recorded)],
-    ['dashboard polls', formatNum(u.snapshots)],
+    ['dashboard polls served', formatNum(u.snapshots)],
   ];
   const top = (u.endpoints || []).slice(0, 6);
-  const epHeader = `<div class="ep-label"><span>Endpoint</span><span>calls</span><span>avg lat</span><span>errors</span></div>`;
   const ep = top.map(e => `
     <div class="ep-row">
       <span class="ep-path">${escapeHtml(e.endpoint)}</span>
-      <span class="v num">${e.calls}×</span>
+      <span class="v num">${e.calls}\u00d7</span>
       <span class="v lat num">${e.avg_lat_ms}ms</span>
       <span class="v ${e.errors ? 'err' : 'zero'} num">${e.errors}</span>
     </div>`).join('');
@@ -1035,57 +1220,61 @@ function renderUsage(u) {
         <span class="k">${k}</span>
         <span class="v">${v}</span>
       </div>`).join('')}
-    ${top.length ? `<div style="margin-top:18px">${epHeader}${ep}</div>` : ''}
-    <div class="footnote"><em>Why no token count?</em> Honcho doesn't surface its own LLM call volume. These are the dashboard's outbound calls to Honcho.</div>`;
+    ${top.length ? `
+      <div style="margin-top:18px">
+        <div class="ep-label"><span>Endpoint</span><span>calls</span><span>avg lat</span><span>errors</span></div>
+        ${ep}
+      </div>` : ''}
+    <div class="footnote"><em>What this measures.</em> Calls this dashboard makes to Honcho. Honcho itself doesn't expose its own LLM call volume or token usage \u2014 there's no equivalent of <code>/v1/usage</code> on the Honcho API.</div>`;
 }
 
-// ---------- system footer --------------------------------------------------
+// ---------- system footer ----------
 function renderSystem(sys, dconfig) {
   const cells = [
-    ['Honcho host',    (sys.honcho_host || '—')],
-    ['Deriver model',  dconfig?.DERIVER_MODEL_CONFIG__MODEL || '—'],
-    ['Deriver enabled',dconfig?.DERIVER_ENABLED || '—'],
-    ['Workspace',      state.ws || '—'],
+    ['Honcho host',    (sys.honcho_host || '\u2014')],
+    ['Deriver model',  dconfig?.DERIVER_MODEL_CONFIG__MODEL || '\u2014'],
+    ['Deriver enabled',dconfig?.DERIVER_ENABLED || '\u2014'],
+    ['Workspace',      state.ws || '\u2014'],
   ];
   $('system').innerHTML = cells.map(([k, v]) =>
-    `<div class="stat-cell"><span class="stat-label">${k}</span><span class="stat-value mono">${escapeHtml(v)}</span></div>`
+    `<div class="stat-cell"><span class="stat-label">${k}</span><span class="stat-value">${escapeHtml(v)}</span></div>`
   ).join('');
 
-  const data = [
-    ['API',     'v3 REST'],
-    ['Proxy',   sys.proxy_host || '127.0.0.1:7777'],
-    ['Polling', `${(1000/POLL_MS).toFixed(1)} Hz`],
-  ];
-  $('line-data').innerHTML = data.map(([k,v]) =>
-    `<span class="k">${k}</span>: <span class="v">${escapeHtml(v)}</span>`
-  ).join(' &nbsp;·&nbsp; ');
+  $('line-data').innerHTML = [
+    ['API',       'v3 REST'],
+    ['Proxy',     sys.proxy_host || '127.0.0.1:7777'],
+    ['Polling',   `${(1000/POLL_MS).toFixed(1)} Hz`],
+  ].map(([k,v]) => `<span class="k">${k}</span> <span class="num">${escapeHtml(v)}</span>`).join(' &nbsp;\u00b7&nbsp; ');
   $('sys-pin').textContent = sys.proxy_host || '127.0.0.1:7777';
 }
 
-// ---------- chart ----------------------------------------------------------
+// ---------- chart ----------
 let chart;
 function initChart() {
   const ctx = $('msgChart').getContext('2d');
-  const grad = ctx.createLinearGradient(0, 0, 0, 180);
-  grad.addColorStop(0, 'rgba(28,110,84,0.10)');
-  grad.addColorStop(1, 'rgba(28,110,84,0.0)');
+  const grad = ctx.createLinearGradient(0, 0, 0, 160);
+  grad.addColorStop(0, 'rgba(123,169,152,0.18)');
+  grad.addColorStop(1, 'rgba(123,169,152,0.0)');
   chart = new Chart(ctx, {
     type: 'line',
     data: {
       labels: Array.from({length: HISTORY_POINTS}, (_, i) => i),
       datasets: [
-        { data: Array(HISTORY_POINTS).fill(0), borderColor: '#1c6e54', backgroundColor: grad, borderWidth: 1.5, tension: 0.3, pointRadius: 0, fill: true },
-        { data: Array(HISTORY_POINTS).fill(0), borderColor: '#b3ac9d', borderWidth: 1, borderDash: [3,3], tension: 0.2, pointRadius: 0, fill: false, yAxisID: 'y1' },
+        { data: Array(HISTORY_POINTS).fill(0), borderColor: '#7ba998', backgroundColor: grad, borderWidth: 1.5, tension: 0.3, pointRadius: 0, fill: true },
+        { data: Array(HISTORY_POINTS).fill(0), borderColor: '#5c6473', borderWidth: 1, borderDash: [3,3], tension: 0.2, pointRadius: 0, fill: false, yAxisID: 'y1' },
       ],
     },
     options: {
       animation: { duration: 250 },
       maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false, backgroundColor: 'rgba(31,28,23,0.95)', titleColor: '#fbfaf7', bodyColor: '#d8d3c7', padding: 10, cornerRadius: 4, displayColors: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { mode: 'index', intersect: false, backgroundColor: '#161a21', titleColor: '#d6dbe2', bodyColor: '#8e96a4', borderColor: '#252b35', borderWidth: 1, padding: 10, cornerRadius: 3, displayColors: false },
+      },
       scales: {
         x: { display: false },
-        y: { position: 'left', grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { color: '#807a6e', font: { size: 10 } }, beginAtZero: true },
-        y1: { position: 'right', grid: { display: false }, ticks: { color: '#b3ac9d', font: { size: 10 } }, beginAtZero: true },
+        y: { position: 'left',  grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5c6473', font: { size: 10 } }, beginAtZero: true },
+        y1: { position: 'right', grid: { display: false }, ticks: { color: '#3d4452', font: { size: 10 } }, beginAtZero: true },
       },
     },
   });
@@ -1100,7 +1289,61 @@ function pushChartPoint(total, delta) {
   chart.update('none');
 }
 
-// ---------- main loop ------------------------------------------------------
+// ---------- DREAM OUTPUT ----------
+async function fetchConclusions(showIfNew = false) {
+  const ws = state.ws || 'hermes';
+  try {
+    const r = await fetch(`/api/conclusions?workspace=${encodeURIComponent(ws)}`, { cache: 'no-store' });
+    if (!r.ok) return;
+    const data = await r.json();
+    const total = data.total || 0;
+    if (showIfNew && total > state.prevConclusionsTotal) {
+      const newCount = total - state.prevConclusionsTotal;
+      const recent = data.items.slice(0, Math.min(newCount, 8));
+      showExtractions(recent, data.items.length);
+    }
+    state.prevConclusionsTotal = total;
+  } catch (_) {}
+}
+
+function showExtractions(items, total) {
+  const out = $('dream-output');
+  const list = $('extraction-list');
+  $('dream-output-meta').textContent = `${items.length} recent of ${total} total \u00b7 extracted just now`;
+  if (!items.length) {
+    list.innerHTML = '<div class="footnote">No new conclusions in this run \u2014 the deriver may need more input or is blocked upstream.</div>';
+  } else {
+    list.innerHTML = items.map(c => `
+      <div class="extraction">
+        <div class="extraction-content">${escapeHtml(c.content || c.observation || '(empty)')}</div>
+        <div class="extraction-meta">
+          <span>peer: <span class="mono">${escapeHtml(strip(c.peer_id || c.peer || '\u2014'))}</span></span>
+          <span class="level ${c.level === 'deductive' ? 'deductive' : ''}">${escapeHtml(c.level || 'explicit')}</span>
+          <span>category: ${escapeHtml(c.category || 'general')}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+  out.classList.add('has-results');
+  state.dreamStartedAt = null;
+  state.dreamInFlight = false;
+  const t = $('dream-output-title');
+  t.textContent = items.length ? 'Dream produced conclusions' : 'Dream completed with no new conclusions';
+  t.classList.remove('dreaming');
+}
+function hideExtractions() {
+  $('dream-output').classList.remove('has-results');
+}
+function setDreaming(label) {
+  const t = $('dream-output-title');
+  t.textContent = label;
+  t.classList.add('dreaming');
+  $('dream-output-meta').textContent = 'deriver is processing\u2026';
+  $('dream-output').classList.add('has-results');
+  $('extraction-list').innerHTML = '';
+}
+
+// ---------- main loop ----------
 async function fetchSnapshot() {
   try {
     const url = `/api/snapshot${state.ws ? '?workspace=' + encodeURIComponent(state.ws) : ''}`;
@@ -1123,6 +1366,7 @@ async function fetchSnapshot() {
     renderUsage(data.usage || {});
     renderSystem(data.system || {}, data.deriver_config || {});
 
+    // chart math
     const total = data.totals.messages;
     const delta = state.prevTotals ? Math.max(0, total - state.prevTotals.messages) : 0;
     pushChartPoint(total, delta);
@@ -1134,16 +1378,29 @@ async function fetchSnapshot() {
       log(`<b>+${delta}</b> new message${delta === 1 ? '' : 's'} in <b>${data.active_workspace}</b>`);
     }
     state.prevTotals = data.totals;
-    $('last-updated').textContent = `Last updated · ${new Date().toLocaleTimeString()}`;
+
+    // Detect dream completion if one was started within the last 60s
+    if (state.dreamInFlight && state.dreamStartedAt) {
+      const q = data.queue || {};
+      const inFlight = (q.pending_work_units || 0) + (q.in_progress_work_units || 0);
+      // if queue drained AND we've waited at least 3s since dream-start, fetch conclusions
+      if (inFlight === 0 && Date.now() - state.dreamStartedAt > 3000) {
+        await fetchConclusions(true);
+      }
+    }
+
+    $('last-updated').textContent = `live since session start \u00b7 last tick ${new Date().toLocaleTimeString()}`;
   } catch (err) {
     log('fetch failed: ' + err.message, 'err');
   }
 }
 
-// ---------- dream action ---------------------------------------------------
+// ---------- dream action ----------
 async function triggerDream() {
   const btn = $('dream-btn');
   btn.disabled = true;
+  state.dreamInFlight = true;
+  state.dreamStartedAt = Date.now();
   try {
     const peers = (state.peers || []).map(p => p.id);
     const observer = peers.find(p => !/^hermes$/i.test(p)) || peers[0] || 'hermes';
@@ -1154,26 +1411,35 @@ async function triggerDream() {
     const u = j.status;
     const ok = (j.ok === true) || (typeof u === 'number' && u >= 200 && u < 300);
     if (ok) {
-      log(`<b>dream scheduled</b> · observer=<b>${escapeHtml(observer)}</b> · omni (Honcho ${u})`, 'ok');
+      log(`<b>dream scheduled</b> \u00b7 observer=<b>${escapeHtml(observer)}</b> \u00b7 omni (Honcho ${u})`, 'ok');
+      setDreaming('Dreaming\u2026 watching the deriver');
     } else {
-      log(`<b>dream failed</b> · upstream ${u}` + (j.resp ? ` · ${escapeHtml(String(j.resp).slice(0,200))}` : ''), 'err');
+      log(`<b>dream failed</b> \u00b7 upstream ${u}`, 'err');
+      state.dreamInFlight = false;
     }
   } catch (err) {
     log('dream error: ' + err.message, 'err');
+    state.dreamInFlight = false;
   } finally {
     btn.disabled = false;
     setTimeout(fetchSnapshot, 800);
   }
 }
 
-// ---------- boot ------------------------------------------------------------
+document.getElementById('dream-output-close').addEventListener('click', (e) => {
+  e.stopPropagation();
+  hideExtractions();
+});
+
+// ---------- boot ----------
 setupHints();
 initChart();
 $('dream-btn').onclick = triggerDream;
 $('refresh-btn').onclick = fetchSnapshot;
 $('usage-reset').onclick = async () => { await fetch('/api/usage/reset', { method: 'POST' }); fetchSnapshot(); };
 fetchSnapshot();
-log('dashboard online · proxying <b>http://127.0.0.1:8000</b>', 'ok');
+fetchConclusions();
+log('dashboard online \u00b7 proxying <b>http://127.0.0.1:8000</b>', 'ok');
 setInterval(fetchSnapshot, POLL_MS);
 </script>
 </body>

@@ -177,12 +177,42 @@ def dashboard_snapshot(workspace: str | None = None) -> dict:
     # 1) workspaces
     s, body = h("POST", "/v3/workspaces/list", {})
     items = body.get("items", []) if isinstance(body, dict) else []
-    out["workspaces"] = [{"id": w["id"], "created_at": w.get("created_at")} for w in items]
-    if not out["active_workspace"] and out["workspaces"]:
-        out["active_workspace"] = out["workspaces"][0]["id"]
+    # Filter empty workspaces: drop those with no sessions, peers, or conclusions.
+    # pk-local can't be deleted server-side (Honcho returns 409), so suppress
+    # it client-side instead.
+    raw_workspaces = [{"id": w["id"], "created_at": w.get("created_at")} for w in items]
+    out["workspaces_all"] = raw_workspaces
+    non_empty: list[dict] = []
+    for w in raw_workspaces:
+        wid = w["id"]
+        _, ss = h("POST", f"/v3/workspaces/{wid}/sessions/list", {})
+        sess_count = len(ss.get("items", [])) if isinstance(ss, dict) else 0
+        if sess_count > 0:
+            w["session_count"] = sess_count
+            non_empty.append(w)
+            continue
+        _, pp = h("POST", f"/v3/workspaces/{wid}/peers/list", {})
+        peer_count = len(pp.get("items", [])) if isinstance(pp, dict) else 0
+        if peer_count > 0:
+            w["session_count"] = 0
+            w["peer_count"] = peer_count
+            non_empty.append(w)
+            continue
+        _, cc = h("POST", f"/v3/workspaces/{wid}/conclusions/list", {})
+        concl_total = cc.get("total", 0) if isinstance(cc, dict) else 0
+        if concl_total > 0:
+            w["session_count"] = 0
+            w["conclusion_count"] = concl_total
+            non_empty.append(w)
+            continue
+    if workspace and workspace in {w["id"] for w in raw_workspaces}:
+        out["active_workspace"] = workspace
+    elif non_empty:
+        out["active_workspace"] = non_empty[0]["id"]
+    else:
+        out["active_workspace"] = raw_workspaces[0]["id"] if raw_workspaces else None
     ws = out["active_workspace"]
-
-    # 2) peers + sessions + queue
+    out["workspaces"] = non_empty
     s, body = h("POST", f"/v3/workspaces/{ws}/peers/list", {})
     peers = body.get("items", []) if isinstance(body, dict) else []
     s, body = h("POST", f"/v3/workspaces/{ws}/sessions/list", {})
@@ -421,6 +451,24 @@ class Handler(BaseHTTPRequestHandler):
             qs = parse_qs(url.query)
             ws = int((qs.get("window") or ["60"])[0])
             return self._send(200, json.dumps(USAGE.summarise(window_seconds=ws)).encode(),
+                              "application/json")
+        if url.path == "/api/conclusions":
+            qs = parse_qs(url.query)
+            ws = (qs.get("workspace") or ["hermes"])[0]
+            _, body = h("POST", f"/v3/workspaces/{ws}/conclusions/list", {})
+            items = body.get("items", []) if isinstance(body, dict) else []
+            # normalize per-item shape for the front end
+            norm = []
+            for c in items:
+                norm.append({
+                    "id": c.get("id"),
+                    "peer_id": c.get("peer_id") or c.get("peer"),
+                    "content": (c.get("content") or c.get("observation") or "").strip(),
+                    "level": c.get("level", "explicit"),
+                    "category": c.get("category", "general"),
+                    "created_at": c.get("created_at"),
+                })
+            return self._send(200, json.dumps({"workspace": ws, "total": body.get("total", len(items)) if isinstance(body, dict) else 0, "items": norm}).encode(),
                               "application/json")
         return self._send(404, b"not found", "text/plain")
 
