@@ -63,7 +63,7 @@
 
   /* grid */
   .grid { display: grid; gap: 14px; }
-  .g-kpi { grid-template-columns: repeat(5, 1fr); margin-bottom: 14px; }
+  .g-kpi { grid-template-columns: repeat(6, 1fr); margin-bottom: 14px; }
   .g-main { grid-template-columns: 1.4fr 1fr; }
   .g-mid { grid-template-columns: 1fr 1fr; margin-top: 14px; }
   .g-list { grid-template-columns: 1fr 1fr; margin-top: 14px; }
@@ -246,6 +246,21 @@
     </div>
   </div>
 
+  <!-- memory state + proxy usage -->
+  <div class="grid g-list" style="margin-top:14px">
+    <div class="card">
+      <h2>Memory State (cost surrogate)</h2>
+      <div id="memory-state"></div>
+    </div>
+    <div class="card">
+      <h2>Proxy Usage · last 60s</h2>
+      <div id="usage"></div>
+      <div class="actions" style="margin-top:8px">
+        <button id="usage-reset" style="padding:4px 10px;font-size:10px">Reset Counter</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -295,8 +310,9 @@ function renderKpis(t) {
     ['Sessions', t.sessions, '', null],
     ['Peers', t.peers, '', null],
     ['Messages', t.messages, '', null],
+    ['Conclusions', t.conclusions_total, 'extracted facts', t.conclusions_total > 0 ? 'accent' : null],
     ['Dream WUs', `${t.wu_done}/${t.wu_total}`,
-      `${t.wu_pending} pending`, t.wu_total > 0 ? 'accent' : null],
+      `${t.wu_pending} pending`, t.wu_total > 0 ? 'blue' : null],
     ['In Progress', t.wu_progress, t.wu_progress ? 'deriver active' : 'idle',
       t.wu_progress > 0 ? 'warn' : ''],
   ];
@@ -306,6 +322,69 @@ function renderKpis(t) {
       <div class="val">${v}</div>
       <div class="sub">${sub ?? ''}</div>
     </div>`).join('');
+}
+
+// ---------- memory state (cost surrogates) ----------------------------------
+function renderMemoryState(ms) {
+  const el = $('memory-state');
+  if (!ms) { el.innerHTML = '<div class="empty">no data</div>'; return; }
+  const rows = [
+    ['message text',            ms.message_chars,         ms.message_chars],
+    ['short summaries',         ms.short_summary_chars,   ms.short_summary_chars],
+    ['long summaries',          ms.long_summary_chars,    ms.long_summary_chars],
+    ['peer cards',              ms.peer_card_chars,       ms.peer_card_chars],
+    ['conclusions',             ms.conclusion_chars,      ms.conclusion_chars],
+  ];
+  const rowsHtml = rows.map(([k, ch, _]) => `
+    <div class="stat-row"><span class="k">${k}</span>
+      <span class="v">${formatNum(ch)} chars</span></div>`).join('');
+  el.innerHTML = `
+    ${rowsHtml}
+    <div class="stat-row" style="margin-top:6px;border-top:1px solid var(--line);padding-top:8px">
+      <span class="k" style="color:var(--accent)">approx tokens (4 chars/token)</span>
+      <span class="v" style="color:var(--accent)">~${formatNum(ms.approx_tokens_surrogate)}</span></div>
+    <div style="font-size:10px;color:var(--ink-dim);margin-top:8px;line-height:1.4">
+      ⚠ Honcho's API does not expose token counts. This is a surrogate:
+      chars ÷ 4. To get real token/cost data, instrument the LLM provider
+      directly or scrape deriver logs.
+    </div>`;
+}
+
+// ---------- proxy usage -----------------------------------------------------
+function renderUsage(u) {
+  const el = $('usage');
+  if (!u) { el.innerHTML = '<div class="empty">no data</div>'; return; }
+  const rows = [
+    [`calls (${u.window_seconds}s window)`, formatNum(u.calls_in_window)],
+    ['calls/sec avg',  u.calls_per_sec_avg.toFixed(3)],
+    ['total recorded', formatNum(u.total_calls_recorded)],
+    ['snapshots served', formatNum(u.snapshots)],
+  ];
+  const baseRows = rows.map(([k, v]) =>
+    `<div class="stat-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+  const top = (u.endpoints || []).slice(0, 6);
+  const endpointRows = top.map(e => {
+    const errCls = e.errors > 0 ? 'style="color:var(--bad)"' : '';
+    return `<div class="stat-row" style="display:grid;grid-template-columns:1fr auto auto auto;gap:10px;align-items:center">
+      <span class="k" style="font-family:inherit">${escapeHtml(e.endpoint)}</span>
+      <span class="v">${e.calls}×</span>
+      <span class="v" style="color:var(--accent-2)">${e.avg_lat_ms}ms</span>
+      <span class="v" ${errCls}>${e.errors}✗</span>
+    </div>`;
+  }).join('');
+  el.innerHTML = `
+    ${baseRows}
+    <div style="font-size:10px;color:var(--ink-dim);margin-top:8px;letter-spacing:0.15em;text-transform:uppercase">top endpoints</div>
+    ${endpointRows || '<div class="empty">none in window</div>'}
+    <div style="font-size:10px;color:var(--ink-dim);margin-top:8px;line-height:1.4">
+      These are calls YOUR proxy (this dashboard) makes to Honcho.
+      Honcho itself does not surface its own internal LLM call volume.
+    </div>`;
+}
+
+function formatNum(n) {
+  if (n === null || n === undefined) return '—';
+  return Number(n).toLocaleString();
 }
 
 // ---------- deriver card -----------------------------------------------------
@@ -343,6 +422,7 @@ function renderSessions(sessions) {
       </div>
       <div class="meta">
         <span>💬 ${s.message_count} msgs</span>
+        <span>📝 ${formatNum(s.message_chars)}c</span>
         <span>🤖 last: ${escapeHtml(s.last_peer || '—')}</span>
         <span>🕒 ${formatTs(s.last_ts)}</span>
       </div>
@@ -493,6 +573,8 @@ async function fetchSnapshot() {
     renderPeers(data.peers);
     renderFeed(data.activity);
     renderTotals(data.totals, data.queue);
+    renderMemoryState(data.memory_state || {});
+    renderUsage(data.usage || {});
     state.peers = data.peers;
 
     // chart math
@@ -531,11 +613,25 @@ async function triggerDream() {
     const body = { observer, dream_type: 'omni' };
     const r = await fetch(`/api/dream?workspace=${encodeURIComponent(state.ws || 'hermes')}`,
       { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-    const j = await r.json();
-    if (r.ok) {
-      log(`dream scheduled · observer=<b style="color:var(--accent-2)">${observer}</b> · omni`, 'ok');
+    let j = {};
+    try { j = await r.json(); } catch (_) {}
+    // Proxy always responds 200 for network round-trip success.
+    // Field `ok` (or upstream 2xx status) tells us whether Honcho accepted the dream.
+    const upstreamStatus = j.status;
+    const accepted = (j.ok === true) || (typeof upstreamStatus === 'number' && upstreamStatus >= 200 && upstreamStatus < 300);
+    if (accepted) {
+      // 204 = queued, no further detail. anything else 2xx + resp body = also queued.
+      const detail = upstreamStatus === 204
+        ? 'queued (Honcho 204 — no body)'
+        : `queued (Honcho ${upstreamStatus})`;
+      log(`<span style="color:var(--accent)">dream scheduled</span> · observer=<b style="color:var(--accent-2)">${observer}</b> · omni · ${detail}`, 'ok');
     } else {
-      log(`dream failed (${j.status}): ${typeof j.resp === 'string' ? j.resp : JSON.stringify(j.resp)}`, 'err');
+      // downstream or upstream refused — surface the actual code
+      const what = typeof upstreamStatus === 'number'
+        ? `upstream rejected ${upstreamStatus}`
+        : `proxy error`;
+      const detail = typeof j.resp === 'string' ? j.resp : (j.resp ? JSON.stringify(j.resp) : '');
+      log(`<span style="color:var(--bad)">dream failed</span> · ${what}` + (detail ? ` · ${escapeHtml(detail.slice(0,200))}` : ''), 'err');
     }
   } catch (err) {
     log('dream error: ' + err.message, 'err');
@@ -548,6 +644,10 @@ async function triggerDream() {
 initChart();
 $('dream-btn').onclick = triggerDream;
 $('refresh-btn').onclick = fetchSnapshot;
+$('usage-reset').onclick = async () => {
+  await fetch('/api/usage/reset', { method: 'POST' });
+  fetchSnapshot();
+};
 fetchSnapshot();
 log('dashboard online · proxying http://127.0.0.1:8000', 'ok');
 setInterval(fetchSnapshot, POLL_MS);
