@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Honcho Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg-0: #06080c;
+    --bg-1: #0c1118;
+    --bg-2: #131a24;
+    --bg-3: #1a2333;
+    --line: #1f2a3a;
+    --ink: #d8e1ec;
+    --ink-dim: #6b7a8d;
+    --accent: #4ee0c1;
+    --accent-2: #6aa6ff;
+    --warn: #ffb547;
+    --bad: #ff5d6c;
+    --glow: 0 0 18px rgba(78, 224, 193, 0.35);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg-0); color: var(--ink);
+    font: 13px/1.45 -apple-system, BlinkMacSystemFont, "SF Mono", Menlo, monospace;
+    min-height: 100vh; }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse at 20% 0%, rgba(78,224,193,0.06), transparent 50%),
+      radial-gradient(ellipse at 90% 100%, rgba(106,166,255,0.06), transparent 60%),
+      linear-gradient(transparent 95%, rgba(78,224,193,0.04) 95%),
+      linear-gradient(90deg, transparent 95%, rgba(106,166,255,0.04) 95%);
+    background-size: 100% 100%, 100% 100%, 28px 28px, 28px 28px;
+    animation: drift 30s linear infinite;
+  }
+  @keyframes drift { from { background-position: 0 0, 0 0, 0 0, 0 0; }
+                     to   { background-position: 0 0, 0 0, 28px 28px, 28px 28px; } }
+  @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .wrap { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 18px 22px 60px; }
+
+  header { display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 0 18px; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
+  h1 { margin: 0; font-size: 18px; letter-spacing: 0.18em; font-weight: 600;
+    color: var(--ink); text-transform: uppercase; }
+  h1 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 10px; background: var(--accent); box-shadow: var(--glow);
+    animation: pulse 1.6s ease-in-out infinite; vertical-align: middle; }
+
+  .tabs { display: flex; gap: 6px; align-items: center; }
+  .tab { padding: 6px 12px; border: 1px solid var(--line); border-radius: 4px;
+    background: var(--bg-1); color: var(--ink-dim); cursor: pointer;
+    font-family: inherit; font-size: 12px; transition: 0.2s; }
+  .tab:hover { color: var(--ink); border-color: var(--accent-2); }
+  .tab.active { color: var(--accent); border-color: var(--accent);
+    background: rgba(78,224,193,0.08); box-shadow: var(--glow); }
+  .refresh { margin-left: 14px; color: var(--ink-dim); font-size: 11px; }
+  .refresh .ind { display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); margin-right: 6px; vertical-align: middle;
+    animation: pulse 1.2s ease-in-out infinite; }
+
+  /* grid */
+  .grid { display: grid; gap: 14px; }
+  .g-kpi { grid-template-columns: repeat(5, 1fr); margin-bottom: 14px; }
+  .g-main { grid-template-columns: 1.4fr 1fr; }
+  .g-mid { grid-template-columns: 1fr 1fr; margin-top: 14px; }
+  .g-list { grid-template-columns: 1fr 1fr; margin-top: 14px; }
+  @media (max-width: 1000px) { .g-kpi, .g-main, .g-mid, .g-list { grid-template-columns: 1fr; } }
+
+  /* card */
+  .card { background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+    border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px;
+    position: relative; overflow: hidden; }
+  .card::before { content: ""; position: absolute; left: 0; top: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: 0.6; }
+  .card h2 { margin: 0 0 10px; font-size: 11px; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--ink-dim); font-weight: 600; }
+
+  /* kpi */
+  .kpi { background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+    border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+    position: relative; overflow: hidden; }
+  .kpi .label { font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--ink-dim); }
+  .kpi .val { font-size: 26px; font-weight: 600; margin-top: 6px;
+    color: var(--ink); font-feature-settings: "tnum"; }
+  .kpi .sub { font-size: 11px; color: var(--ink-dim); margin-top: 2px; }
+  .kpi.accent .val { color: var(--accent); }
+  .kpi.blue .val { color: var(--accent-2); }
+  .kpi.warn .val { color: var(--warn); }
+  .kpi.bad .val { color: var(--bad); }
+
+  /* deriver card */
+  .deriver { display: flex; flex-direction: column; gap: 8px; }
+  .deriver-bar { height: 8px; background: var(--bg-3); border-radius: 4px; overflow: hidden;
+    position: relative; }
+  .deriver-bar > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    box-shadow: var(--glow); transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+  .deriver-meta { display: flex; justify-content: space-between; color: var(--ink-dim);
+    font-size: 11px; }
+  .deriver-status { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .deriver-status.idle .pulse { background: var(--ink-dim); }
+  .deriver-status.busy .pulse { background: var(--accent); animation: pulse 1s ease-in-out infinite; }
+  .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+
+  /* session list */
+  .list { display: flex; flex-direction: column; gap: 10px; max-height: 380px; overflow: auto; }
+  .list::-webkit-scrollbar { width: 6px; }
+  .list::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 3px; }
+  .session, .peer { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px;
+    background: var(--bg-1); transition: 0.2s; }
+  .session:hover, .peer:hover { border-color: var(--accent-2); }
+  .session .h, .peer .h { display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 6px; }
+  .session .id, .peer .id { color: var(--accent); font-weight: 600; font-size: 12px; }
+  .session .meta { color: var(--ink-dim); font-size: 11px;
+    display: flex; gap: 12px; margin-bottom: 6px; flex-wrap: wrap; }
+  .session .meta span { display: inline-flex; align-items: center; gap: 4px; }
+  .session .summary { color: var(--ink); font-size: 12px; opacity: 0.85;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden; }
+  .session .lastmsg { color: var(--ink-dim); font-size: 11px; margin-top: 4px;
+    font-style: italic; opacity: 0.75;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  .badge { padding: 2px 7px; border-radius: 3px; font-size: 10px;
+    letter-spacing: 0.1em; text-transform: uppercase; }
+  .badge.on { background: rgba(78,224,193,0.15); color: var(--accent); }
+  .badge.off { background: rgba(255,93,108,0.12); color: var(--bad); }
+
+  /* activity feed */
+  .feed { max-height: 380px; overflow: auto; font-size: 11.5px; }
+  .feed::-webkit-scrollbar { width: 6px; }
+  .feed::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 3px; }
+  .feed-row { padding: 8px 0; border-bottom: 1px dashed var(--line); }
+  .feed-row:last-child { border-bottom: none; }
+  .feed-row .top { display: flex; justify-content: space-between;
+    color: var(--ink-dim); font-size: 10px; letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 4px; }
+  .feed-row .peer { color: var(--accent-2); }
+  .feed-row .msg { color: var(--ink); opacity: 0.9;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; }
+
+  /* buttons */
+  .actions { display: flex; gap: 8px; margin-top: 8px; }
+  button { font-family: inherit; cursor: pointer; padding: 8px 14px;
+    border-radius: 5px; border: 1px solid var(--line); background: var(--bg-2);
+    color: var(--ink); font-size: 12px; letter-spacing: 0.1em;
+    text-transform: uppercase; transition: 0.2s; }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: linear-gradient(180deg, rgba(78,224,193,0.18), rgba(78,224,193,0.05));
+    border-color: var(--accent); color: var(--accent); box-shadow: var(--glow); }
+  button.primary:hover { filter: brightness(1.15); }
+  button.primary:disabled { opacity: 0.5; cursor: not-allowed; filter: none; }
+  button .spinner { display: none; margin-left: 8px; width: 10px; height: 10px;
+    border: 2px solid var(--accent); border-top-color: transparent; border-radius: 50%;
+    animation: spin 0.8s linear infinite; vertical-align: middle; }
+  button.loading .spinner { display: inline-block; }
+
+  .chart-wrap { height: 220px; position: relative; }
+
+  .empty { color: var(--ink-dim); font-style: italic; padding: 18px; text-align: center; }
+
+  .stat-row { display: flex; justify-content: space-between; padding: 4px 0;
+    font-size: 12px; border-bottom: 1px solid var(--line); }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-row .k { color: var(--ink-dim); }
+  .stat-row .v { color: var(--ink); font-feature-settings: "tnum"; }
+
+  /* log console */
+  .log { font-size: 11px; max-height: 220px; overflow: auto;
+    background: var(--bg-0); border: 1px solid var(--line); border-radius: 4px;
+    padding: 8px 10px; }
+  .log::-webkit-scrollbar { width: 6px; }
+  .log::-webkit-scrollbar-thumb { background: var(--bg-3); border-radius: 3px; }
+  .log-row { color: var(--ink-dim); padding: 1px 0; }
+  .log-row .ts { color: var(--accent-2); margin-right: 6px; }
+  .log-row.err { color: var(--bad); }
+  .log-row.ok { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="dot"></span>HONCHO · LIVE</h1>
+    <div class="tabs" id="tabs">
+      <span class="refresh"><span class="ind"></span><span id="refresh-ts">…</span></span>
+    </div>
+  </header>
+
+  <!-- KPIs -->
+  <div class="grid g-kpi" id="kpis"></div>
+
+  <!-- main row: deriver + chart -->
+  <div class="grid g-main">
+    <div class="card deriver">
+      <h2>Deriver Queue</h2>
+      <div class="deriver-status" id="deriver-status"><span class="pulse"></span><span id="deriver-label">idle</span></div>
+      <div class="deriver-bar"><div id="deriver-bar" style="width:0%"></div></div>
+      <div class="deriver-meta">
+        <span id="deriver-progress-label">0 / 0 work units completed</span>
+        <span id="deriver-pending-label">0 pending · 0 in progress</span>
+      </div>
+      <div class="actions">
+        <button id="dream-btn" class="primary">Dream Now <span class="spinner"></span></button>
+        <button id="refresh-btn">Force Refresh</button>
+      </div>
+      <div class="log" id="log" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <h2>Activity Stream · last 60s</h2>
+      <div class="chart-wrap"><canvas id="msgChart"></canvas></div>
+      <div id="chart-stats" style="display:flex;gap:18px;margin-top:8px;font-size:11px;color:var(--ink-dim)">
+        <div>now: <span id="msgs-now" style="color:var(--accent)">0</span></div>
+        <div>1m Δ: <span id="msgs-delta" style="color:var(--accent-2)">0</span></div>
+        <div>total: <span id="msgs-total" style="color:var(--ink)">0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- mid: sessions + peers -->
+  <div class="grid g-mid">
+    <div class="card">
+      <h2>Sessions</h2>
+      <div class="list" id="sessions"></div>
+    </div>
+    <div class="card">
+      <h2>Peers</h2>
+      <div class="list" id="peers"></div>
+    </div>
+  </div>
+
+  <!-- feed + totals -->
+  <div class="grid g-list">
+    <div class="card">
+      <h2>Recent Messages</h2>
+      <div class="feed" id="feed"></div>
+    </div>
+    <div class="card">
+      <h2>Workspace Totals</h2>
+      <div id="totals"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+const POLL_MS = 2500;
+const HISTORY_POINTS = 60;          // 60 ticks × 2.5s = 150s rolling window
+const MAX_DELTA_KEEP = 600;         // 10 min message timestamp retention
+
+const state = {
+  ws: null,
+  prevTotals: null,                 // {total, ...} from previous fetch
+  totalsHistory: [],                // array of {t, total, delta}
+  lastMsgIds: new Set(),            // message ids seen, for "new" detection
+  msgTimestamps: [],                // number[] of recent message times for delta calc
+};
+
+const $ = (id) => document.getElementById(id);
+const logBox = $('log');
+function log(msg, level = '') {
+  const row = document.createElement('div');
+  row.className = 'log-row ' + level;
+  const ts = new Date().toLocaleTimeString();
+  row.innerHTML = `<span class="ts">${ts}</span>${msg}`;
+  logBox.prepend(row);
+  while (logBox.children.length > 80) logBox.removeChild(logBox.lastChild);
+}
+
+// ---------- tabs -------------------------------------------------------------
+function renderTabs(workspaces, active) {
+  const tabs = $('tabs');
+  // preserve the refresh span
+  const refresh = tabs.querySelector('.refresh');
+  tabs.innerHTML = '';
+  workspaces.forEach(w => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (w.id === active ? ' active' : '');
+    b.textContent = w.id;
+    b.onclick = () => { state.ws = w.id; fetchSnapshot(); };
+    tabs.appendChild(b);
+  });
+  if (refresh) tabs.appendChild(refresh);
+}
+
+// ---------- KPIs -------------------------------------------------------------
+function renderKpis(t) {
+  const items = [
+    ['Sessions', t.sessions, '', null],
+    ['Peers', t.peers, '', null],
+    ['Messages', t.messages, '', null],
+    ['Dream WUs', `${t.wu_done}/${t.wu_total}`,
+      `${t.wu_pending} pending`, t.wu_total > 0 ? 'accent' : null],
+    ['In Progress', t.wu_progress, t.wu_progress ? 'deriver active' : 'idle',
+      t.wu_progress > 0 ? 'warn' : ''],
+  ];
+  $('kpis').innerHTML = items.map(([l, v, sub, cls]) => `
+    <div class="kpi ${cls || ''}">
+      <div class="label">${l}</div>
+      <div class="val">${v}</div>
+      <div class="sub">${sub ?? ''}</div>
+    </div>`).join('');
+}
+
+// ---------- deriver card -----------------------------------------------------
+function renderDeriver(q) {
+  const total = q.total_work_units || 0;
+  const done = q.completed_work_units || 0;
+  const pending = q.pending_work_units || 0;
+  const inprog = q.in_progress_work_units || 0;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  $('deriver-bar').style.width = pct + '%';
+  $('deriver-progress-label').textContent =
+    total === 0 ? 'no work units yet' : `${done} / ${total} work units completed (${pct}%)`;
+  $('deriver-pending-label').textContent = `${pending} pending · ${inprog} in progress`;
+
+  const status = $('deriver-status');
+  const busy = pending > 0 || inprog > 0;
+  status.className = 'deriver-status ' + (busy ? 'busy' : 'idle');
+  $('deriver-label').textContent = busy
+    ? `processing (${inprog} active, ${pending} queued)`
+    : total > 0 ? 'completed' : 'idle — awaiting input';
+}
+
+// ---------- sessions ---------------------------------------------------------
+function renderSessions(sessions) {
+  const el = $('sessions');
+  if (!sessions.length) { el.innerHTML = '<div class="empty">no sessions</div>'; return; }
+  el.innerHTML = sessions.map(s => {
+    const summary = s.short_summary
+      ? `<div class="summary">${escapeHtml(s.short_summary)}</div>`
+      : `<div class="summary" style="color:var(--ink-dim);font-style:italic">no summary yet — deriver will fold messages at the 1024-token batch gate</div>`;
+    return `<div class="session">
+      <div class="h">
+        <span class="id">${escapeHtml(s.id)}</span>
+        <span class="badge ${s.is_active ? 'on' : 'off'}">${s.is_active ? 'active' : 'closed'}</span>
+      </div>
+      <div class="meta">
+        <span>💬 ${s.message_count} msgs</span>
+        <span>🤖 last: ${escapeHtml(s.last_peer || '—')}</span>
+        <span>🕒 ${formatTs(s.last_ts)}</span>
+      </div>
+      ${summary}
+      ${s.last_message ? `<div class="lastmsg">last: ${escapeHtml(s.last_message)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ---------- peers ------------------------------------------------------------
+function renderPeers(peers) {
+  const el = $('peers');
+  if (!peers.length) { el.innerHTML = '<div class="empty">no peers</div>'; return; }
+  el.innerHTML = peers.map(p => `
+    <div class="peer">
+      <div class="h">
+        <span class="id">${escapeHtml(p.id)}</span>
+        <span class="badge ${p.has_card ? 'on' : 'off'}">${p.has_card ? 'card' : 'no card'}</span>
+      </div>
+      <div class="meta" style="color:var(--ink-dim);font-size:11px;display:flex;gap:12px">
+        <span>📇 ${p.card_size}b card</span>
+        <span>💡 ${p.conclusions} conclusions</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ---------- feed -------------------------------------------------------------
+function renderFeed(feed) {
+  const el = $('feed');
+  if (!feed.length) { el.innerHTML = '<div class="empty">nothing yet</div>'; return; }
+  el.innerHTML = feed.map(f => `
+    <div class="feed-row">
+      <div class="top">
+        <span><span class="peer">${escapeHtml(f.peer || '?')}</span> · ${escapeHtml(f.session)}</span>
+        <span>${formatTs(f.ts)}</span>
+      </div>
+      <div class="msg">${escapeHtml(f.preview)}</div>
+    </div>
+  `).join('');
+}
+
+// ---------- totals -----------------------------------------------------------
+function renderTotals(totals, queue) {
+  const rows = [
+    ['Work units (total / done)', `${totals.wu_total} / ${totals.wu_done}`],
+    ['Work units (in progress)', totals.wu_progress],
+    ['Work units (pending)', totals.wu_pending],
+    ['Sessions', totals.sessions],
+    ['Peers', totals.peers],
+    ['Messages (across all sessions)', totals.messages],
+    ['Queue poll ts', new Date().toLocaleTimeString()],
+  ];
+  $('totals').innerHTML = rows.map(([k, v]) =>
+    `<div class="stat-row"><span class="k">${k}</span><span class="v">${v}</span></div>`
+  ).join('');
+}
+
+// ---------- chart ------------------------------------------------------------
+let chart;
+function initChart() {
+  const ctx = $('msgChart').getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 220);
+  grad.addColorStop(0, 'rgba(78,224,193,0.6)');
+  grad.addColorStop(1, 'rgba(78,224,193,0.0)');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: Array.from({length: HISTORY_POINTS}, (_, i) => i),
+      datasets: [{
+        label: 'message total',
+        data: Array(HISTORY_POINTS).fill(0),
+        borderColor: '#4ee0c1',
+        backgroundColor: grad,
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 0,
+        fill: true,
+      }, {
+        label: 'Δ per tick',
+        data: Array(HISTORY_POINTS).fill(0),
+        borderColor: '#6aa6ff',
+        borderWidth: 1.5,
+        tension: 0.2,
+        pointRadius: 0,
+        yAxisID: 'y1',
+        fill: false,
+      }],
+    },
+    options: {
+      animation: { duration: 250 },
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { mode: 'index', intersect: false,
+                   backgroundColor: '#0c1118', borderColor: '#1f2a3a', borderWidth: 1,
+                   titleColor: '#6aa6ff', bodyColor: '#d8e1ec' },
+      },
+      scales: {
+        x: { display: false, grid: { color: '#1f2a3a' } },
+        y: { position: 'left', grid: { color: '#1f2a3a' }, ticks: { color: '#6b7a8d' },
+             beginAtZero: true },
+        y1: { position: 'right', grid: { display: false }, ticks: { color: '#6b7a8d' },
+             beginAtZero: true },
+      },
+    },
+  });
+}
+function pushChartPoint(total, delta) {
+  chart.data.datasets[0].data.push(total);
+  chart.data.datasets[1].data.push(delta);
+  if (chart.data.datasets[0].data.length > HISTORY_POINTS) {
+    chart.data.datasets[0].data.shift();
+    chart.data.datasets[1].data.shift();
+  }
+  chart.update('none');
+}
+
+// ---------- helpers ----------------------------------------------------------
+function escapeHtml(s) {
+  return (s ?? '').toString()
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function formatTs(ts) {
+  if (!ts) return '—';
+  // Honcho ids are ULID-ish base62 strings; not parseable to time.
+  // created_at fields are ISO if present.
+  if (ts.length > 20 && ts.includes('-')) {
+    return new Date(ts).toLocaleTimeString();
+  }
+  return ts.slice(0, 8) + '…';
+}
+
+// ---------- main loop --------------------------------------------------------
+async function fetchSnapshot() {
+  try {
+    const url = `/api/snapshot${state.ws ? '?workspace=' + encodeURIComponent(state.ws) : ''}`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('http ' + resp.status);
+    const data = await resp.json();
+
+    renderTabs(data.workspaces, data.active_workspace);
+    state.ws = data.active_workspace;
+    renderKpis(data.totals);
+    renderDeriver(data.queue || {});
+    renderSessions(data.sessions);
+    renderPeers(data.peers);
+    renderFeed(data.activity);
+    renderTotals(data.totals, data.queue);
+    state.peers = data.peers;
+
+    // chart math
+    const total = data.totals.messages;
+    const prev = state.prevTotals;
+    const delta = prev ? Math.max(0, total - prev.messages) : 0;
+    pushChartPoint(total, delta);
+    $('msgs-now').textContent = total;
+    $('msgs-delta').textContent = '+' + delta;
+    $('msgs-total').textContent = total;
+
+    // detect new message ids (for log feed)
+    let newMsgs = 0;
+    data.sessions.forEach(s => {
+      // We only see the LAST message preview, so we can't diff deeply here.
+      // Use heuristic: if total grew, log it.
+    });
+    if (delta > 0 && prev) {
+      log(`<b style="color:var(--accent)">+${delta}</b> new message${delta === 1 ? '' : 's'} · workspace <b>${data.active_workspace}</b>`);
+    }
+
+    state.prevTotals = data.totals;
+    $('refresh-ts').textContent = 'updated ' + new Date().toLocaleTimeString();
+  } catch (err) {
+    log('fetch failed: ' + err.message, 'err');
+  }
+}
+
+async function triggerDream() {
+  const btn = $('dream-btn');
+  btn.classList.add('loading'); btn.disabled = true;
+  try {
+    // pick an observer: prefer a real user peer over "hermes" itself
+    const peers = (state.peers || []).map(p => p.id);
+    const observer = peers.find(p => !/^hermes$/i.test(p)) || peers[0] || 'hermes';
+    const body = { observer, dream_type: 'omni' };
+    const r = await fetch(`/api/dream?workspace=${encodeURIComponent(state.ws || 'hermes')}`,
+      { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+    const j = await r.json();
+    if (r.ok) {
+      log(`dream scheduled · observer=<b style="color:var(--accent-2)">${observer}</b> · omni`, 'ok');
+    } else {
+      log(`dream failed (${j.status}): ${typeof j.resp === 'string' ? j.resp : JSON.stringify(j.resp)}`, 'err');
+    }
+  } catch (err) {
+    log('dream error: ' + err.message, 'err');
+  } finally {
+    btn.classList.remove('loading'); btn.disabled = false;
+    setTimeout(fetchSnapshot, 800);
+  }
+}
+
+initChart();
+$('dream-btn').onclick = triggerDream;
+$('refresh-btn').onclick = fetchSnapshot;
+fetchSnapshot();
+log('dashboard online · proxying http://127.0.0.1:8000', 'ok');
+setInterval(fetchSnapshot, POLL_MS);
+</script>
+</body>
+</html>
